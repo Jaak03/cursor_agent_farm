@@ -1,0 +1,60 @@
+2025-08-20 09:20:04,648 - agent_farm_logger - INFO - [bold cyan]Gemini Code Agent Farm[/bold cyan]
+2025-08-20 09:20:04,648 - agent_farm_logger - INFO - Project: /Users/mother/Git/cursor_agent_farm/projects/sample-project
+2025-08-20 09:20:04,648 - agent_farm_logger - INFO - Agents: 20
+2025-08-20 09:20:04,648 - agent_farm_logger - INFO - Session: gemini_agents
+2025-08-20 09:20:04,648 - agent_farm_logger - INFO - Auto-restart: disabled
+2025-08-20 09:20:04,652 - agent_farm_logger - DEBUG - Creating backup of essential Claude settings...
+2025-08-20 09:20:04,655 - agent_farm_logger - DEBUG - Skipping projects/ directory (caches)
+2025-08-20 09:20:04,656 - agent_farm_logger - INFO - ✓ Backed up Gemini settings to gemini_backup_essential_20250820_092004.tar.gz (0.5 KB)
+2025-08-20 09:20:04,656 - agent_farm_logger - DEBUG - Backup storage: 3 files, 0.0 MB total
+2025-08-20 09:20:04,656 - agent_farm_logger - INFO - Regenerating type-check and lint output
+2025-08-20 09:20:05,215 - agent_farm_logger - INFO - ✓ Generated 6 lines of problems
+2025-08-20 09:20:05,215 - agent_farm_logger - INFO - Committing updated problem count
+2025-08-20 09:20:05,249 - agent_farm_logger - WARNING - You have uncommitted changes:
+2025-08-20 09:20:05,250 - agent_farm_logger - WARNING -  M .gitignore
+
+2025-08-20 09:20:05,250 - agent_farm_logger - WARNING - The agent farm will add and commit the problems file.
+2025-08-20 09:20:05,250 - agent_farm_logger - WARNING - Other uncommitted changes will remain uncommitted.
+2025-08-20 09:20:05,258 - agent_farm_logger - DEBUG - git add /Users/mother/Git/cursor_agent_farm/projects/sample-project/combined_typechecker_and_linter_problems.txt
+2025-08-20 09:20:05,292 - agent_farm_logger - WARNING - No changes to commit - skipping push
+2025-08-20 09:20:05,292 - agent_farm_logger - INFO - Creating tmux session 'gemini_agents' with 20 agents
+2025-08-20 09:20:05,807 - agent_farm_logger - DEBUG - tmux new-session -d -s gemini_agents -n controller
+2025-08-20 09:20:06,525 - agent_farm_logger - DEBUG - Waiting for tmux panes to be created...
+2025-08-20 09:20:06,553 - agent_farm_logger - DEBUG - Waiting for shell prompts in all panes...
+2025-08-20 09:20:08,992 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.0: ...ject %
+2025-08-20 09:20:09,009 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.1: ...ject %
+2025-08-20 09:20:09,028 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.2: ...ject %
+2025-08-20 09:20:09,051 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.3: ...ct %
+2025-08-20 09:20:09,080 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.4: ...ject %
+2025-08-20 09:20:09,333 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.5: ...ject %
+2025-08-20 09:20:09,342 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.6: ...ject %
+2025-08-20 09:20:09,352 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.7: ...ct %
+2025-08-20 09:20:09,361 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.8: ...ject %
+2025-08-20 09:20:09,370 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.9: ...ject %
+2025-08-20 09:20:09,378 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.10: ...ject %
+2025-08-20 09:20:09,596 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.11: ...ct %
+2025-08-20 09:20:09,601 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.12: ...ject %
+2025-08-20 09:20:09,606 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.13: ...ject %
+2025-08-20 09:20:09,611 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.14: ...ject %
+2025-08-20 09:20:09,615 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.15: ...ct %
+2025-08-20 09:20:09,620 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.16: ...ject %
+2025-08-20 09:20:09,625 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.17: ...ject %
+2025-08-20 09:20:09,631 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.18: ...ject %
+2025-08-20 09:20:09,636 - agent_farm_logger - DEBUG - Pane gemini_agents:agents.19: ...ct %
+2025-08-20 09:20:09,649 - agent_farm_logger - WARNING - Optimizing display for 20 panes...
+2025-08-20 09:20:09,674 - agent_farm_logger - DEBUG - If text is too large, zoom out with: Ctrl/Cmd + minus (-)
+2025-08-20 09:20:09,674 - agent_farm_logger - DEBUG - Zoom level suggested: 3 steps
+2025-08-20 09:20:09,899 - agent_farm_logger - INFO - ✓ Context-reset macro bound to Ctrl+R (broadcasts /clear to all agents)
+2025-08-20 09:20:09,900 - agent_farm_logger - INFO - ✓ Created session with 20 panes
+2025-08-20 09:20:09,901 - agent_farm_logger - INFO - Launching agents
+2025-08-20 09:20:10,121 - agent_farm_logger - DEBUG - Agent 00: Waiting 2s after cd before launching gg...
+2025-08-20 09:20:12,355 - agent_farm_logger - INFO - 🛠  Agent 00: launching gg, waiting 15.0s...
+2025-08-20 09:20:29,676 - agent_farm_logger - DEBUG - Agent 00: Captured 55 chars, checking readiness...
+2025-08-20 09:20:45,594 - agent_farm_logger - INFO - Received termination signal. Shutting down gracefully...
+2025-08-20 09:20:45,796 - agent_farm_logger - WARNING - Agent launch interrupted by shutdown signal
+2025-08-20 09:20:45,801 - agent_farm_logger - INFO - All agents launched - Monitoring active
+2025-08-20 09:20:45,801 - agent_farm_logger - WARNING - Monitor dashboard running in tmux controller window
+2025-08-20 09:20:45,801 - agent_farm_logger - INFO - View with: tmux attach -t gemini_agents:controller
+2025-08-20 09:20:45,801 - agent_farm_logger - INFO - Or use: ./view_agents.sh
+2025-08-20 09:20:45,801 - agent_farm_logger - DEBUG - Press Ctrl+C here for graceful shutdown
+

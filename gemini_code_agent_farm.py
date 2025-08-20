@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Claude Code Agent Farm - Hybrid Orchestrator
+Gemini Code Agent Farm - Hybrid Orchestrator
 Combines simplicity with robust monitoring and automatic agent management
 """
 
@@ -21,6 +21,8 @@ from pathlib import Path
 from random import randint
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from logging_config import logger
+
 import typer
 from rich import box
 from rich.console import Console
@@ -38,7 +40,7 @@ from rich.table import Table
 
 app = typer.Typer(
     rich_markup_mode="rich",
-    help="Orchestrate multiple Claude Code agents for parallel work using tmux",
+    help="Orchestrate multiple Gemini Code agents for parallel work using tmux",
     context_settings={"help_option_names": ["-h", "--help"]},
 )
 console = Console(stderr=True)  # Use stderr for progress/info so stdout remains clean
@@ -51,7 +53,7 @@ def interruptible_confirm(message: str, default: bool = False) -> bool:
     try:
         return Confirm.ask(message, default=default)
     except KeyboardInterrupt:
-        console.print("\n[yellow]Interrupted - using default response[/yellow]")
+        logger.info("\nInterrupted - using default response")
         return default
 
 
@@ -71,7 +73,7 @@ def run(cmd: str, *, check: bool = True, quiet: bool = False, capture: bool = Fa
     When capture=True, output is captured and returned
     """
     if not quiet:
-        console.log(cmd, style="cyan")
+        logger.debug(cmd)
 
     # Parse command for shell safety when possible
     cmd_arg: Union[str, List[str]]
@@ -103,7 +105,7 @@ def run(cmd: str, *, check: bool = True, quiet: bool = False, capture: bool = Fa
             )
             return result.returncode, "", ""
         except subprocess.CalledProcessError as e:
-            console.print(f"[red]Command failed with exit code {e.returncode}: {cmd}[/red]")
+            logger.error(f"Command failed with exit code {e.returncode}: {cmd}")
             raise
 
 
@@ -126,7 +128,7 @@ def line_count(file_path: Path) -> int:
             with file_path.open("r", encoding="utf-8", errors="ignore") as f:
                 return sum(1 for _ in f)
     except Exception as e:
-        console.print(f"[yellow]Warning: Could not count lines in {file_path}: {e}[/yellow]")
+        logger.warning(f"Could not count lines in {file_path}: {e}")
         return 0
 
 
@@ -209,7 +211,7 @@ def tmux_capture(target: str) -> str:
 
 
 class AgentMonitor:
-    """Monitors Claude Code agents for health and performance"""
+    """Monitors Gemini Code agents for health and performance"""
 
     def __init__(
         self,
@@ -282,7 +284,7 @@ class AgentMonitor:
         
         # Only update if significantly different from current (>20% change)
         if abs(adaptive_timeout - self.idle_timeout) / self.idle_timeout > 0.2:
-            console.print(f"[dim]Adjusting idle timeout: {self.idle_timeout}s → {adaptive_timeout}s (median cycle: {median_time:.1f}s)[/dim]")
+            logger.debug(f"Adjusting idle timeout: {self.idle_timeout}s → {adaptive_timeout}s (median cycle: {median_time:.1f}s)")
             self.idle_timeout = adaptive_timeout
         
         return self.idle_timeout
@@ -308,27 +310,27 @@ class AgentMonitor:
         return None
 
     def is_gemini_ready(self, content: str) -> bool:
-        """Check if Claude Code is ready for input"""
+        """Check if Gemini Code is ready for input"""
         # Multiple possible indicators that Claude is ready
         ready_indicators = [
-            "Welcome to Claude Code!" in content,  # Welcome message
+            "Welcome to Gemini Code!" in content,  # Welcome message
             ("│ > Try" in content),  # The prompt box with suggestion
             ("? for shortcuts" in content),  # Shortcuts hint at bottom
             ("╰─" in content and "│ >" in content),  # Box structure with prompt
             ("/help for help" in content),  # Help text in welcome message
-            ("cwd:" in content and "Welcome to Claude" in content),  # Working directory shown
+            ("cwd:" in content and "Welcome to Gemini" in content),  # Working directory shown
             ("Bypassing Permissions" in content and "│ >" in content),  # May appear with prompt
             ("│ >" in content and "─╯" in content),  # Prompt box bottom border
         ]
         return any(ready_indicators)
 
     def is_gemini_working(self, content: str) -> bool:
-        """Check if Claude Code is actively working"""
+        """Check if Gemini Code is actively working"""
         indicators = ["✻ Pontificating", "● Bash(", "✻ Running", "✻ Thinking", "esc to interrupt"]
         return any(indicator in content for indicator in indicators)
 
     def has_welcome_screen(self, content: str) -> bool:
-        """Check if Claude Code is showing the welcome/setup screen"""
+        """Check if Gemini Code is showing the welcome/setup screen"""
         welcome_indicators = [
             # Setup/onboarding screens only
             "Choose the text style",
@@ -338,7 +340,7 @@ class AgentMonitor:
             "Dark mode✔",
             "Light mode",
             "colorblind-friendly",
-            # Remove "Welcome to Claude Code" as it appears when ready
+            # Remove "Welcome to Gemini Code" as it appears when ready
         ]
         return any(indicator in content for indicator in welcome_indicators)
 
@@ -351,9 +353,9 @@ class AgentMonitor:
         error_indicators = [
             # Login/auth prompts
             "Select login method:",
-            "Claude aggount with subscription",
-            "Sign in to Claude",
-            "Log in to Claude",
+            "Gemini account with subscription",
+            "Sign in to Gemini",
+            "Log in to Gemini",
             "Enter your API key",
             "API key",
             # Configuration errors
@@ -384,9 +386,9 @@ class AgentMonitor:
             "ParseError",
             # Other login-related text
             "Choose your login method",
-            "Continue with Claude aggount",
-            "I have a Claude aggount",
-            "Create aggount",
+            "Continue with Gemini account",
+            "I have a Gemini account",
+            "Create account",
         ]
         return any(indicator in content for indicator in error_indicators)
 
@@ -394,7 +396,7 @@ class AgentMonitor:
         """Check status of a single agent"""
         pane_target = self.pane_mapping.get(agent_id)
         if not pane_target:
-            console.print(f"[red]Error: No pane mapping found for agent {agent_id}[/red]")
+            logger.error(f"No pane mapping found for agent {agent_id}")
             return self.agents[agent_id]
 
         content = tmux_capture(pane_target)
@@ -538,7 +540,7 @@ class AgentMonitor:
         # Stalled heartbeat indicates the pane is likely hung
         heartbeat_age = self._check_heartbeat_age(agent_id)
         if heartbeat_age is not None and heartbeat_age > 120:
-            console.print(f"[yellow]Agent {agent_id} heartbeat is {heartbeat_age:.0f}s old[/yellow]")
+            logger.warning(f"Agent {agent_id} heartbeat is {heartbeat_age:.0f}s old")
             return "error"
 
         # Low-context can often be resolved with /clear instead of a full restart
@@ -558,7 +560,7 @@ class AgentMonitor:
     def get_status_table(self) -> Table:
         """Generate status table for all agents"""
         table = Table(
-            title=f"Claude Agent Farm - {datetime.now().strftime('%H:%M:%S')}",
+            title=f"Gemini Agent Farm - {datetime.now().strftime('%H:%M:%S')}",
             box=box.ROUNDED,  # Use rounded corners for status tables
         )
 
@@ -725,7 +727,7 @@ class ClaudeAgentFarm:
             # Check for double tap
             if self._last_sigint_time and (current_time - self._last_sigint_time) < self._force_kill_threshold:
                 # Second Ctrl-C within threshold - force kill
-                console.print("\n[red]Force killing tmux session...[/red]")
+                logger.error("Force killing tmux session...")
                 with contextlib.suppress(Exception):
                     run(f"tmux kill-session -t {self.session}", check=False, quiet=True)
                 # Clean up state files
@@ -744,21 +746,21 @@ class ClaudeAgentFarm:
                 self._last_sigint_time = current_time
                 if not self.shutting_down:
                     self.shutting_down = True
-                    console.print("\n[yellow]Received interrupt signal. Shutting down gracefully...[/yellow]")
-                    console.print("[dim]Press Ctrl-C again within 3 seconds to force kill[/dim]")
+                    logger.info("Received interrupt signal. Shutting down gracefully...")
+                    logger.info("Press Ctrl-C again within 3 seconds to force kill")
                     self.running = False
         else:
             # Other signals (SIGTERM, etc.) - normal graceful shutdown
             if not self.shutting_down:
                 self.shutting_down = True
-                console.print("\n[yellow]Received termination signal. Shutting down gracefully...[/yellow]")
+                logger.info("Received termination signal. Shutting down gracefully...")
                 self.running = False
 
     def _backup_gemini_settings(self) -> Optional[str]:
-        """Backup essential Claude Code settings (excluding large caches)"""
+        """Backup essential Gemini Code settings (excluding large caches)"""
         gemini_dir = Path.home() / ".gemini"
         if not gemini_dir.exists():
-            console.print("[yellow]No Claude Code directory found to backup[/yellow]")
+            logger.warning("No Gemini Code directory found to backup")
             return None
         
         try:
@@ -775,7 +777,7 @@ class ClaudeAgentFarm:
             import tarfile
             
             if self.full_backup:
-                console.print("[dim]Creating FULL backup of ~/.gemini directory (this may take a while)...[/dim]")
+                logger.debug("Creating FULL backup of ~/.gemini directory (this may take a while)...")
                 
                 with tarfile.open(backup_file, "w:gz") as tar:
                     # Use filter to preserve all metadata
@@ -789,9 +791,9 @@ class ClaudeAgentFarm:
                     tar.add(gemini_dir, arcname="gemini", filter=reset_ids)
                 
                 size_mb = backup_file.stat().st_size / (1024 * 1024)
-                console.print(f"[green]✓ Full backup completed: {backup_file.name} ({size_mb:.1f} MB)[/green]")
+                logger.info(f"✓ Full backup completed: {backup_file.name} ({size_mb:.1f} MB)")
             else:
-                console.print("[dim]Creating backup of essential Claude settings...[/dim]")
+                logger.debug("Creating backup of essential Claude settings...")
                 
                 with tarfile.open(backup_file, "w:gz") as tar:
                     # Filter to preserve metadata
@@ -823,21 +825,21 @@ class ClaudeAgentFarm:
                         if todos_size < 10 * 1024 * 1024:  # Less than 10MB
                             tar.add(todos_dir, arcname="gemini/todos", filter=reset_ids)
                         else:
-                            console.print(f"[dim]Skipping todos directory ({todos_size / 1024 / 1024:.1f} MB)[/dim]")
+                            logger.debug(f"Skipping todos directory ({todos_size / 1024 / 1024:.1f} MB)")
                     
                     # Skip projects directory - it's just caches
-                    console.print("[dim]Skipping projects/ directory (caches)[/dim]")
+                    logger.debug("Skipping projects/ directory (caches)")
                 
                 # Get backup size
                 size_kb = backup_file.stat().st_size / 1024
-                console.print(f"[green]✓ Backed up Claude settings to {backup_file.name} ({size_kb:.1f} KB)[/green]")
+                logger.info(f"✓ Backed up Gemini settings to {backup_file.name} ({size_kb:.1f} KB)")
             
             # Clean up old backups (keep last 10)
             self._cleanup_old_backups(backup_dir, keep_count=10)
             
             return str(backup_file)
         except Exception as e:
-            console.print(f"[red]Error: Could not backup Claude directory: {e}[/red]")
+            logger.error(f"Error: Could not backup Gemini directory: {e}")
             return None
 
     def _cleanup_old_backups(self, backup_dir: Path, keep_count: int = 10, max_total_mb: int = 200) -> None:
@@ -872,30 +874,30 @@ class ClaudeAgentFarm:
             for old_backup in backups_to_remove:
                 size_mb = old_backup.stat().st_size / (1024 * 1024)
                 old_backup.unlink()
-                console.print(f"[dim]Removed old backup: {old_backup.name} ({size_mb:.1f} MB)[/dim]")
+                logger.debug(f"Removed old backup: {old_backup.name} ({size_mb:.1f} MB)")
             
             # Report current backup storage status
             if backups_to_keep:
                 total_mb = total_size_bytes / (1024 * 1024)
-                console.print(f"[dim]Backup storage: {len(backups_to_keep)} files, {total_mb:.1f} MB total[/dim]")
+                logger.debug(f"Backup storage: {len(backups_to_keep)} files, {total_mb:.1f} MB total")
                 
         except Exception as e:
-            console.print(f"[yellow]Warning: Could not clean up old backups: {e}[/yellow]")
+            logger.warning(f"Could not clean up old backups: {e}")
 
     def _restore_gemini_settings(self, backup_path: Optional[str] = None) -> bool:
-        """Restore Claude Code settings from backup"""
+        """Restore Gemini Code settings from backup"""
         try:
             # If no backup path provided, use the most recent one
             if backup_path is None:
                 backup_path = self.settings_backup_path
             
             if not backup_path:
-                console.print("[red]No backup path available[/red]")
+                logger.error("No backup path available")
                 return False
             
             backup_file = Path(backup_path)
             if not backup_file.exists():
-                console.print(f"[red]Backup file not found: {backup_path}[/red]")
+                logger.error(f"Backup file not found: {backup_path}")
                 return False
             
             gemini_dir = Path.home() / ".gemini"
@@ -919,7 +921,7 @@ class ClaudeAgentFarm:
                 
                 # Extract backup
                 import tarfile
-                console.print(f"[dim]Restoring from {backup_file.name}...[/dim]")
+                logger.debug(f"Restoring from {backup_file.name}...")
                 
                 with tarfile.open(backup_file, "r:gz") as tar:
                     # Extract with numeric owner to preserve permissions
@@ -953,7 +955,7 @@ class ClaudeAgentFarm:
                         with contextlib.suppress(Exception):
                             os.chown(path, uid, gid)
                 
-                console.print("[green]✓ Restored Claude settings from backup[/green]")
+                logger.info("✓ Restored Gemini settings from backup")
                 
                 # Check and fix permissions after restore
                 self._check_gemini_permissions()
@@ -961,11 +963,11 @@ class ClaudeAgentFarm:
                 return True
                 
             except Exception as e:
-                console.print(f"[red]Error during restore: {e}[/red]")
+                logger.error(f"Error during restore: {e}")
                 return False
                 
         except Exception as e:
-            console.print(f"[red]Error restoring Claude settings: {e}[/red]")
+            logger.error(f"Error restoring Gemini settings: {e}")
             return False
 
     def _copy_best_practices_guides(self) -> None:
@@ -987,7 +989,7 @@ class ClaudeAgentFarm:
         for file_path in best_practices_files:
             source_file = Path(file_path).expanduser().resolve()
             if not source_file.exists():
-                console.print(f"[yellow]Best practices file not found: {source_file}[/yellow]")
+                logger.warning(f"Best practices file not found: {source_file}")
                 continue
                 
             dest_file = dest_dir / source_file.name
@@ -996,19 +998,19 @@ class ClaudeAgentFarm:
                 shutil.copy2(source_file, dest_file)
                 copied_files.append(source_file.name)
             except Exception as e:
-                console.print(f"[yellow]Failed to copy {source_file.name}: {e}[/yellow]")
+                logger.warning(f"Failed to copy {source_file.name}: {e}")
         
         if copied_files:
-            console.print(f"[green]✓ Copied {len(copied_files)} best practices guide(s) to project[/green]")
+            logger.info(f"✓ Copied {len(copied_files)} best practices guide(s) to project")
             for filename in copied_files:
-                console.print(f"  - {filename}")
+                logger.info(f"  - {filename}")
 
     def _load_prompt(self) -> str:
         """Load prompt from file and substitute variables"""
         if self.prompt_file:
             prompt_path = Path(self.prompt_file)
             if not prompt_path.exists():
-                console.print(f"[red]Error: Prompt file not found: {self.prompt_file}[/red]")
+                logger.error(f"Error: Prompt file not found: {self.prompt_file}")
                 raise ValueError(f"Prompt file not found: {self.prompt_file}")
             prompt_text = prompt_path.read_text().strip()
             if not prompt_text:
@@ -1063,10 +1065,10 @@ class ClaudeAgentFarm:
     def regenerate_problems(self) -> None:
         """Regenerate the type-checker and linter problems file"""
         if self.skip_regenerate:
-            console.print("[yellow]Skipping problem file regeneration[/yellow]")
+            logger.warning("Skipping problem file regeneration")
             return
 
-        console.rule("[yellow]Regenerating type-check and lint output")
+        logger.info("Regenerating type-check and lint output")
 
         # Get commands from config or use defaults based on tech stack
         tech_stack = getattr(self, 'tech_stack', 'nextjs')
@@ -1159,13 +1161,13 @@ class ClaudeAgentFarm:
         # Count problems before and after
         prev_count = getattr(self, '_last_problem_count', 0)
         count = line_count(self.combined_file)
-        console.print(f"[green]✓ Generated {count} lines of problems[/green]")
+        logger.info(f"✓ Generated {count} lines of problems")
         
         # Track problems fixed (decrease in count)
         if prev_count > 0 and count < prev_count:
             problems_fixed = prev_count - count
             self.total_problems_fixed += problems_fixed
-            console.print(f"[green]✓ Fixed {problems_fixed} problems this cycle[/green]")
+            logger.info(f"✓ Fixed {problems_fixed} problems this cycle")
         
         # Store current count for next comparison
         self._last_problem_count = count
@@ -1173,16 +1175,16 @@ class ClaudeAgentFarm:
     def commit_and_push(self) -> None:
         """Commit and push the updated problem count"""
         if self.skip_commit:
-            console.print("[yellow]Skipping git commit/push[/yellow]")
+            logger.warning("Skipping git commit/push")
             return
 
-        console.rule("[yellow]Committing updated problem count")
+        logger.info("Committing updated problem count")
 
         # Verify we're in a git repository
         ret, _, _ = run("git rev-parse --is-inside-work-tree", capture=True, quiet=True, check=False)
         if ret != 0:
-            console.print("[red]Error: Not in a git repository[/red]")
-            console.print("[yellow]Skipping git operations[/yellow]")
+            logger.error("Not in a git repository")
+            logger.warning("Skipping git operations")
             return
 
         # Check for uncommitted changes
@@ -1198,18 +1200,18 @@ class ClaudeAgentFarm:
 
         ret, stdout, _ = run("git status --porcelain", capture=True, quiet=True)
         if stdout.strip():
-            console.print("[yellow]You have uncommitted changes:[/yellow]")
-            console.print(stdout)
-            console.print("[yellow]The agent farm will add and commit the problems file.[/yellow]")
-            console.print("[yellow]Other uncommitted changes will remain uncommitted.[/yellow]")
+            logger.warning("You have uncommitted changes:")
+            logger.warning(stdout)
+            logger.warning("The agent farm will add and commit the problems file.")
+            logger.warning("Other uncommitted changes will remain uncommitted.")
             if not interruptible_confirm("Do you want to continue?"):
                 raise typer.Exit(1)
 
         # Ensure we're on a branch (not detached HEAD)
         ret, stdout, _ = run("git symbolic-ref HEAD", capture=True, quiet=True, check=False)
         if ret != 0:
-            console.print("[red]Error: You're in a detached HEAD state[/red]")
-            console.print("[yellow]Please checkout a branch before running the agent farm[/yellow]")
+            logger.error("You're in a detached HEAD state")
+            logger.warning("Please checkout a branch before running the agent farm")
             raise typer.Exit(1)
 
         count = line_count(self.combined_file)
@@ -1224,7 +1226,7 @@ class ClaudeAgentFarm:
             both = (commit_result.stdout or "") + (commit_result.stderr or "")
             if commit_result.returncode != 0:  # noqa: SIM102
                 if "nothing to commit" in both or "no changes added" in both:
-                    console.print("[yellow]No changes to commit - skipping push[/yellow]")
+                    logger.warning("No changes to commit - skipping push")
                     return
                 # Other errors still show warning below
 
@@ -1236,7 +1238,7 @@ class ClaudeAgentFarm:
 
             remote = self.git_remote
             run(f"git push {remote} {branch}", check=False)
-            console.print(f"[green]✓ Pushed commit with {count} current problems[/green]")
+            logger.info(f"✓ Pushed commit with {count} current problems")
             
             # Track commit for reporting
             self.total_commits_made += 1
@@ -1244,7 +1246,7 @@ class ClaudeAgentFarm:
             # Display rich diff summary
             self._display_commit_diff()
         except subprocess.CalledProcessError:
-            console.print("[yellow]⚠ git commit/push skipped (no changes?)")
+            logger.warning("⚠ git commit/push skipped (no changes?)")
 
     def _display_commit_diff(self) -> None:
         """Display a rich diff summary of the last commit"""
@@ -1255,18 +1257,17 @@ class ClaudeAgentFarm:
                 return
             
             # Create a rich panel with the diff information
-            console.print()  # Add space before
-            console.print(Panel(
+            logger.info("\n" + Panel(
                 stdout.strip(),
                 title="[bold cyan]📊 Commit Diff Summary[/bold cyan]",
                 border_style="cyan",
                 box=box.ROUNDED
-            ))
+            ).render())
             
             # Get short summary of changes
             _, stdout, _ = run("git diff --shortstat HEAD~1..HEAD", capture=True, quiet=True)
             if stdout.strip():
-                console.print(f"[dim]{stdout.strip()}[/dim]")
+                logger.debug(stdout.strip())
             
             # Get list of changed files
             _, stdout, _ = run("git diff --name-status HEAD~1..HEAD", capture=True, quiet=True)
@@ -1285,13 +1286,13 @@ class ClaudeAgentFarm:
                     summary_parts.append(f"[red]{deleted_count} deleted[/red]")
                 
                 if summary_parts:
-                    console.print(f"Files: {', '.join(summary_parts)}")
+                    logger.info(f"Files: {', '.join(summary_parts)}")
             
-            console.print()  # Add space after
+            logger.debug("\n")
             
         except Exception as e:
             # Don't fail the whole operation if diff display fails
-            console.print(f"[dim]Could not display diff summary: {e}[/dim]")
+            logger.warning(f"Could not display diff summary: {e}")
 
     def _wait_for_shell_prompt(self, pane_target: str, timeout: int = 30, ignore_shutdown: bool = False) -> bool:
         """Wait for a shell prompt to appear in the pane
@@ -1308,7 +1309,7 @@ class ClaudeAgentFarm:
 
         # ------------------------- Active probe setup ------------------------- #
         # Some shell configurations use very minimal or custom prompts that the
-        # passive heuristics below cannot reliably detect.  To aggommodate a
+        # passive heuristics below cannot reliably detect.  To accommodate a
         # wider variety of prompts we fall back to sending an `echo` command
         # containing a unique marker and waiting for that marker to appear in
         # the captured pane output.  These variables keep track of the probe
@@ -1326,7 +1327,7 @@ class ClaudeAgentFarm:
                 if lines:
                     # Only show debug output once per pane
                     if not debug_shown and len(lines[-1]) > 0:
-                        console.print(f"[dim]Pane {pane_target}: ...{lines[-1][-50:]}[/dim]")
+                        logger.debug(f"Pane {pane_target}: ...{lines[-1][-50:]}")
                         debug_shown = True
 
                     # Skip if direnv is still loading
@@ -1338,7 +1339,7 @@ class ClaudeAgentFarm:
                     # Look through ALL lines, not just the last few, since prompts can be complex
                     for line in lines:
                         if project_dir_name in line:
-                            console.print(f"[dim]Found project directory '{project_dir_name}' in prompt[/dim]")
+                            logger.debug(f"Found project directory '{project_dir_name}' in prompt")
                             return True
 
                     # Fall back to traditional prompt detection
@@ -1354,25 +1355,25 @@ class ClaudeAgentFarm:
                         return True
                     # Check for git prompt patterns like "on main"
                     if re.search(r"on\s+\S+.*\s*$", lines[-1]):  # Git branch info
-                        console.print("[dim]Detected git prompt pattern[/dim]")
+                        logger.debug("Detected git prompt pattern")
                         return True
                 last_content = content
 
             # ------------------------------------------------------------------ #
             # Active probe logic - short-circuit the function as soon as we see
             # the unique probe marker in the pane output, which demonstrates
-            # that the shell is aggepting and executing commands.
+            # that the shell is accepting and executing commands.
             # ------------------------------------------------------------------ #
             elapsed = time.time() - start_time
 
             # 1) If we already sent a probe and the marker appears → ready.
             if probe_attempted and probe_marker and probe_marker in content:
-                console.print(f"[dim]Pane {pane_target}: Shell responded to probe - ready[/dim]")
+                logger.debug(f"Pane {pane_target}: Shell responded to probe - ready")
                 # Clear the temporary probe output so it does not clutter the pane
                 tmux_send(pane_target, "clear", enter=True, update_heartbeat=False)
                 return True
 
-            # 2) If passive detection has not suggeeded within ~3 s, send probe.
+            # 2) If passive detection has not succeeded within ~3 s, send probe.
             if (not probe_attempted) and (elapsed > 3):
                 probe_attempted = True
                 from random import randint  # local import to avoid top-of-file churn
@@ -1387,28 +1388,28 @@ class ClaudeAgentFarm:
 
         # Check if we were interrupted
         if not self.running:
-            console.print("[yellow]Shell prompt check interrupted by shutdown signal[/yellow]")
+            logger.warning("Shell prompt check interrupted by shutdown signal")
             return False
 
         # Show final content if we timeout
         if content:
             lines = content.strip().splitlines()
             if lines:
-                console.print(f"[yellow]Timeout waiting for prompt in {pane_target}[/yellow]")
-                console.print(f"[yellow]Last line: {lines[-1]}[/yellow]")
+                logger.warning(f"Timeout waiting for prompt in {pane_target}")
+                logger.warning(f"Last line: {lines[-1]}")
                 # Show more context to help debug
                 if len(lines) > 1:
-                    console.print("[dim]Previous lines:[/dim]")
+                    logger.debug("Previous lines:")
                     for line in lines[-5:-1]:  # Show up to 4 lines before the last
-                        console.print(f"[dim]  {line}[/dim]")
+                        logger.debug(f"  {line}")
         else:
-            console.print(f"[yellow]Timeout waiting for prompt in {pane_target}. No content captured.[/yellow]")
+            logger.warning(f"Timeout waiting for prompt in {pane_target}. No content captured.")
 
         return False
 
     def setup_tmux_session(self) -> None:
         """Create tmux session with tiled agent panes"""
-        console.rule(f"[yellow]Creating tmux session '{self.session}' with {self.agents} agents")
+        logger.info(f"Creating tmux session '{self.session}' with {self.agents} agents")
 
         # Kill existing session if it exists
         run(f"tmux kill-session -t {self.session}", check=False, quiet=True)
@@ -1428,7 +1429,7 @@ class ClaudeAgentFarm:
                 run(f"tmux select-layout -t {self.session}:agents tiled", quiet=True)
 
         # Get the actual pane IDs - retry until we have the right count
-        console.print("[dim]Waiting for tmux panes to be created...[/dim]")
+        logger.debug("Waiting for tmux panes to be created...")
         pane_ids = []
         start_time = time.time()
         timeout = 10  # 10 seconds max to create panes
@@ -1449,8 +1450,8 @@ class ClaudeAgentFarm:
 
         # Create mapping from agent ID to actual pane ID
         if len(pane_ids) != self.agents:
-            console.print(f"[red]Error: Expected {self.agents} panes but found {len(pane_ids)}[/red]")
-            console.print(f"[red]Pane IDs found: {pane_ids}[/red]")
+            logger.error(f"Error: Expected {self.agents} panes but found {len(pane_ids)}")
+            logger.error(f"Pane IDs found: {pane_ids}")
             raise RuntimeError("Failed to create the expected number of tmux panes")
 
         for agent_id, pane_id in enumerate(pane_ids[: self.agents]):
@@ -1458,7 +1459,7 @@ class ClaudeAgentFarm:
 
         # Wait for all panes to have shell prompts ready
         if not self.fast_start:
-            console.print("[dim]Waiting for shell prompts in all panes...[/dim]")
+            logger.debug("Waiting for shell prompts in all panes...")
             with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
@@ -1476,10 +1477,10 @@ class ClaudeAgentFarm:
                     if self._wait_for_shell_prompt(pane_target):
                         progress.update(task, advance=1)
                     else:
-                        console.print(f"[yellow]Warning: Pane {agent_id} slow to initialize[/yellow]")
+                        logger.warning(f"Warning: Pane {agent_id} slow to initialize")
                         progress.update(task, advance=1)
         else:
-            console.print("[dim]Fast start enabled - skipping shell prompt checks[/dim]")
+            logger.debug("Fast start enabled - skipping shell prompt checks")
             # Just wait a moment for panes to settle
             time.sleep(1.0)
 
@@ -1493,7 +1494,7 @@ class ClaudeAgentFarm:
 
         # Automatically adjust font size for many panes
         if self.agents >= 10:
-            console.print(f"[yellow]Optimizing display for {self.agents} panes...[/yellow]")
+            logger.warning(f"Optimizing display for {self.agents} panes...")
 
             # Calculate zoom level needed
             zoom_steps = 3 if self.agents >= 20 else 2 if self.agents >= 15 else 1
@@ -1532,8 +1533,8 @@ class ClaudeAgentFarm:
             run(f"tmux set-option -t {self.session} -g aggressive-resize on", quiet=True)
 
             # If zoom didn't work automatically, remind user
-            console.print("[dim]If text is too large, zoom out with: Ctrl/Cmd + minus (-)[/dim]")
-            console.print(f"[dim]Zoom level suggested: {zoom_steps} step{'s' if zoom_steps > 1 else ''}[/dim]")
+            logger.debug("If text is too large, zoom out with: Ctrl/Cmd + minus (-)")
+            logger.debug(f"Zoom level suggested: {zoom_steps} step{'s' if zoom_steps > 1 else ''}")
 
             self._zoom_adjusted = True
 
@@ -1559,7 +1560,7 @@ class ClaudeAgentFarm:
             reset_cmd = reset_cmd[:-4]
             # Bind to Ctrl+r in the controller window
             run(f"tmux bind-key -T root -n C-r \\; display-message 'Sending /clear to all agents...' \\; {reset_cmd}", quiet=True)
-            console.print("[green]✓ Context-reset macro bound to Ctrl+R (broadcasts /clear to all agents)[/green]")
+            logger.info("✓ Context-reset macro bound to Ctrl+R (broadcasts /clear to all agents)")
 
         # Register cleanup handler
         if not self._cleanup_registered:
@@ -1568,7 +1569,7 @@ class ClaudeAgentFarm:
             atexit.register(self._emergency_cleanup)
             self._cleanup_registered = True
 
-        console.print(f"[green]✓ Created session with {self.agents} panes[/green]")
+        logger.info(f"✓ Created session with {self.agents} panes")
 
     def _acquire_gemini_lock(self, timeout: float = 5.0) -> bool:
         """Acquire a lock file to prevent concurrent Claude Code launches"""
@@ -1604,7 +1605,7 @@ class ClaudeAgentFarm:
             lock_file.unlink()
 
     def _check_gemini_permissions(self) -> bool:
-        """Check and fix permissions on Claude settings files"""
+        """Check and fix permissions on Gemini settings files"""
         gemini_dir = Path.home() / ".gemini"
         settings_file = gemini_dir / "settings.json"
         
@@ -1615,37 +1616,37 @@ class ClaudeAgentFarm:
                 
                 # Check if permissions are too open
                 if current_mode != 0o600:
-                    console.print(f"[yellow]Fixing permissions on {settings_file.name} (was {oct(current_mode)})[/yellow]")
+                    logger.warning(f"Fixing permissions on {settings_file.name} (was {oct(current_mode)})")
                     os.chmod(settings_file, 0o600)
                 
                 # Ensure we own the file
                 stat_info = settings_file.stat()
                 if stat_info.st_uid != os.getuid():
-                    console.print(f"[yellow]Fixing ownership on {settings_file.name}[/yellow]")
+                    logger.warning(f"Fixing ownership on {settings_file.name}")
                     try:
                         os.chown(settings_file, os.getuid(), os.getgid())
                     except PermissionError:
-                        console.print("[red]Could not change ownership - may need sudo[/red]")
+                        logger.error("Could not change ownership - may need sudo")
                         return False
             
             # Check directory permissions
             if gemini_dir.exists():
                 dir_mode = gemini_dir.stat().st_mode & 0o777
                 if dir_mode not in (0o700, 0o755):
-                    console.print(f"[yellow]Fixing permissions on .gemini directory (was {oct(dir_mode)})[/yellow]")
+                    logger.warning(f"Fixing permissions on .gemini directory (was {oct(dir_mode)})")
                     os.chmod(gemini_dir, 0o700)
             
             return True
             
         except Exception as e:
-            console.print(f"[red]Error checking permissions: {e}[/red]")
+            logger.error(f"Error checking permissions: {e}")
             return False
 
     def start_agent(self, agent_id: int, restart: bool = False) -> None:
         """Start or restart a single agent"""
         pane_target = self.pane_mapping.get(agent_id)
         if not pane_target:
-            console.print(f"[red]Error: No pane mapping found for agent {agent_id}[/red]")
+            logger.error(f"No pane mapping found for agent {agent_id}")
             return
 
         if restart:
@@ -1653,27 +1654,27 @@ class ClaudeAgentFarm:
             tmux_send(pane_target, "/exit")
             # Wait for shell prompt to appear
             if not self._wait_for_shell_prompt(pane_target, timeout=15):
-                console.print(f"[yellow]Warning: Agent {agent_id} pane slow to return to shell prompt[/yellow]")
+                logger.warning(f"Agent {agent_id} pane slow to return to shell prompt")
 
             if self.monitor:
                 self.monitor.agents[agent_id]["cycles"] += 1
 
-        # Navigate and start Claude Code
+        # Navigate and start Gemini Code
         # Quote the path so directories with spaces or shell metacharacters work
         tmux_send(pane_target, f"cd {shlex.quote(str(self.project_path))}")
         
         # CRITICAL: Wait a couple seconds for cd to complete and shell to stabilize
         # This prevents race conditions and ensures we're in the right directory
-        console.print(f"[dim]Agent {agent_id:02d}: Waiting 2s after cd before launching gg...[/dim]")
+        logger.debug(f"Agent {agent_id:02d}: Waiting 2s after cd before launching gg...")
         time.sleep(2.0)
 
         # Acquire lock before launching gg to prevent config corruption
         lock_acquired = False
         if not self._acquire_gemini_lock(timeout=10.0):
-            console.print(f"[yellow]Agent {agent_id:02d}: Waiting for lock to launch gg...[/yellow]")
+            logger.warning(f"Agent {agent_id:02d}: Waiting for lock to launch gg...")
             # Try once more with longer timeout
             if not self._acquire_gemini_lock(timeout=20.0):
-                console.print(f"[red]Agent {agent_id:02d}: Could not acquire lock - aborting launch[/red]")
+                logger.error(f"Agent {agent_id:02d}: Could not acquire lock - aborting launch")
                 if self.monitor:
                     self.monitor.agents[agent_id]["status"] = "error"
                     self.monitor.agents[agent_id]["errors"] += 1
@@ -1684,7 +1685,7 @@ class ClaudeAgentFarm:
             tmux_send(pane_target, "gg")
 
             if not restart:
-                console.print(f"🛠  Agent {agent_id:02d}: launching gg, waiting {self.wait_after_gg}s...")
+                logger.info(f"🛠  Agent {agent_id:02d}: launching gg, waiting {self.wait_after_gg}s...")
 
             # Make wait_after_gg interruptible
             for _ in range(int(self.wait_after_gg * 5)):
@@ -1696,9 +1697,9 @@ class ClaudeAgentFarm:
             if lock_acquired:
                 self._release_gemini_lock()
 
-        # Verify Claude Code started suggessfully
+        # Verify Gemini Code started successfully
         max_retries = 5
-        gemini_started_suggessfully = False
+        gemini_started_successfully = False
 
         # Give Claude Code a bit more time to fully initialize before first check
         time.sleep(2.0)
@@ -1711,45 +1712,45 @@ class ClaudeAgentFarm:
 
             # Debug log for troubleshooting startup detection
             if attempt == 0 and len(content.strip()) > 0:
-                console.print(f"[dim]Agent {agent_id:02d}: Captured {len(content)} chars, checking readiness...[/dim]")
+                logger.debug(f"Agent {agent_id:02d}: Captured {len(content)} chars, checking readiness...")
                 # Log key indicators for debugging
-                if "Welcome to Claude Code!" in content:
-                    console.print(f"[dim]Agent {agent_id:02d}: Found welcome message[/dim]")
+                if "Welcome to Gemini Code!" in content:
+                    logger.debug(f"Agent {agent_id:02d}: Found welcome message")
                 if "│ >" in content:
-                    console.print(f"[dim]Agent {agent_id:02d}: Found prompt box[/dim]")
+                    logger.debug(f"Agent {agent_id:02d}: Found prompt box")
                 if "? for shortcuts" in content:
-                    console.print(f"[dim]Agent {agent_id:02d}: Found shortcuts hint[/dim]")
+                    logger.debug(f"Agent {agent_id:02d}: Found shortcuts hint")
 
             # Check for various failure conditions
             if not content or len(content.strip()) < 10:
                 # Empty or nearly empty content indicates gg didn't start
-                console.print(
-                    f"[yellow]Agent {agent_id:02d}: No output from Claude Code yet (attempt {attempt + 1}/{max_retries})[/yellow]"
+                logger.warning(
+                    f"Agent {agent_id:02d}: No output from Gemini Code yet (attempt {attempt + 1}/{max_retries})"
                 )
             elif self.monitor and self.monitor.is_gemini_ready(content):
                 # Check for readiness FIRST before checking for errors
-                gemini_started_suggessfully = True
+                gemini_started_successfully = True
                 break
             elif self.monitor and len(content.strip()) > 100 and (
                 self.monitor.has_settings_error(content) or self.monitor.has_welcome_screen(content)
             ):
                 # Only check for errors if we have substantial content (>100 chars)
-                console.print(
-                    f"[red]Agent {agent_id:02d}: Settings error/setup screen detected - attempting restore[/red]"
+                logger.error(
+                    f"Agent {agent_id:02d}: Settings error/setup screen detected - attempting restore"
                 )
 
                 # Kill this gg instance more forcefully
-                console.print(f"[yellow]Agent {agent_id:02d}: Killing corrupted Claude Code instance...[/yellow]")
+                logger.warning(f"Agent {agent_id:02d}: Killing corrupted Gemini Code instance...")
                 tmux_send(pane_target, "\x03")  # Ctrl+C
                 time.sleep(0.5)
                 tmux_send(pane_target, "\x03")  # Send Ctrl+C again to be sure
                 time.sleep(0.5)
                 
-                # Send exit command in case it's still in Claude Code
+                # Send exit command in case it's still in Gemini Code
                 tmux_send(pane_target, "/exit")
                 time.sleep(1.0)
                 
-                # Wait for shell prompt to ensure Claude Code has fully exited
+                # Wait for shell prompt to ensure Gemini Code has fully exited
                 if not self._wait_for_shell_prompt(pane_target, timeout=10, ignore_shutdown=True):
                     # If still not at shell, try harder
                     tmux_send(pane_target, "\x03")  # Another Ctrl+C
@@ -1764,7 +1765,7 @@ class ClaudeAgentFarm:
                 # Try to restore from backup
                 if hasattr(self, "settings_backup_path") and self.settings_backup_path:  # noqa: SIM102
                     if self._restore_gemini_settings():
-                        console.print(f"[green]Settings restored for agent {agent_id} - retrying launch[/green]")
+                        logger.info(f"Settings restored for agent {agent_id} - retrying launch")
                         # Wait a bit more to ensure everything is settled
                         time.sleep(2.0)
                         
@@ -1780,9 +1781,9 @@ class ClaudeAgentFarm:
                                 # Continue to next iteration to check again
                                 continue
                             else:
-                                console.print(f"[red]Agent {agent_id:02d}: Could not acquire lock for retry[/red]")
+                                logger.error(f"Agent {agent_id:02d}: Could not acquire lock for retry")
                         else:
-                            console.print(f"[red]Agent {agent_id:02d}: Could not get shell prompt for retry[/red]")
+                            logger.error(f"Agent {agent_id:02d}: Could not get shell prompt for retry")
 
                 if self.monitor:
                     self.monitor.agents[agent_id]["status"] = "error"
@@ -1790,7 +1791,7 @@ class ClaudeAgentFarm:
                 return
             elif "command not found" in content and "gg" in content:
                 # gg command doesn't exist
-                console.print(f"[red]Agent {agent_id:02d}: 'gg' command not found[/red]")
+                logger.error(f"Agent {agent_id:02d}: 'gg' command not found")
                 if self.monitor:
                     self.monitor.agents[agent_id]["status"] = "error"
                     self.monitor.agents[agent_id]["errors"] += 1
@@ -1802,17 +1803,17 @@ class ClaudeAgentFarm:
                         return
                     time.sleep(0.2)
             else:
-                console.print(
-                    f"[red]Agent {agent_id:02d}: Claude Code failed to start properly after {max_retries} attempts[/red]"
+                logger.error(
+                    f"Agent {agent_id:02d}: Gemini Code failed to start properly after {max_retries} attempts"
                 )
                 if self.monitor:
                     self.monitor.agents[agent_id]["status"] = "error"
                     self.monitor.agents[agent_id]["errors"] += 1
                 return
 
-        # Only send prompt if Claude Code started suggessfully
-        if not gemini_started_suggessfully:
-            console.print(f"[red]Agent {agent_id:02d}: Skipping prompt injection - Claude Code not ready[/red]")
+        # Only send prompt if Gemini Code started successfully
+        if not gemini_started_successfully:
+            logger.error(f"Agent {agent_id:02d}: Skipping prompt injection - Gemini Code not ready")
             return
 
         # Send prompt with unique seed for randomization
@@ -1827,7 +1828,7 @@ class ClaudeAgentFarm:
         if dynamic_chunk_size != configured_chunk:
             current_prompt = current_prompt.replace(f'{{{configured_chunk}}}', f'{{{dynamic_chunk_size}}}')
             current_prompt = current_prompt.replace(f'{configured_chunk}', str(dynamic_chunk_size))
-            console.print(f"[dim]Agent {agent_id:02d}: Dynamic chunk size: {dynamic_chunk_size} (was {configured_chunk})[/dim]")
+            logger.debug(f"Agent {agent_id:02d}: Dynamic chunk size: {dynamic_chunk_size} (was {configured_chunk})")
         
         # Use regex to handle variations like "random chunks of 50 lines"
         salted_prompt = re.sub(
@@ -1848,15 +1849,15 @@ class ClaudeAgentFarm:
         tmux_send(pane_target, salted_prompt, enter=True)
 
         if not restart:
-            console.print(f"[green]✓ Agent {agent_id:02d}: prompt injected[/green]")
+            logger.info(f"✓ Agent {agent_id:02d}: prompt injected")
 
         # Verify prompt was received by checking for working state
-        time.sleep(2.0)  # Give Claude a moment to start processing
+        time.sleep(2.0)  # Give Gemini a moment to start processing
         verify_content = tmux_capture(pane_target)
         if self.monitor and self.monitor.is_gemini_working(verify_content):
-            console.print(f"[green]✓ Agent {agent_id:02d}: Claude Code is processing the prompt[/green]")
+            logger.info(f"✓ Agent {agent_id:02d}: Gemini Code is processing the prompt")
         else:
-            console.print(f"[yellow]⚠ Agent {agent_id:02d}: Claude Code may not have received the prompt properly[/yellow]")
+            logger.warning(f"⚠ Agent {agent_id:02d}: Gemini Code may not have received the prompt properly")
 
         if self.monitor:
             self.monitor.agents[agent_id]["status"] = "starting"
@@ -1864,7 +1865,7 @@ class ClaudeAgentFarm:
 
     def launch_agents(self) -> None:
         """Launch all agents with staggered start times"""
-        console.rule("[yellow]Launching agents")
+        logger.info("Launching agents")
 
         # Track suggessful launches to detect corruption patterns
         suggessful_launches = 0
@@ -1873,12 +1874,12 @@ class ClaudeAgentFarm:
 
         for i in range(self.agents):
             if not self.running:
-                console.print("[yellow]Agent launch interrupted by shutdown signal[/yellow]")
+                logger.warning("Agent launch interrupted by shutdown signal")
                 break
 
             self.start_agent(i)
 
-            # Check if last agent started suggessfully
+            # Check if last agent started successfully
             if self.monitor and i > 0:
                 time.sleep(1)  # Brief pause to let status update
                 prev_agent_status = self.monitor.agents[i]["status"]
@@ -1886,7 +1887,7 @@ class ClaudeAgentFarm:
                     if last_launch_ok:
                         # Previous launch was OK, but this one failed - double stagger
                         current_stagger = min(current_stagger * 2, 60.0)  # Cap at 60 seconds
-                        console.print(f"[yellow]Launch failure detected - increasing stagger to {current_stagger}s[/yellow]")
+                        logger.warning(f"Launch failure detected - increasing stagger to {current_stagger}s")
                     last_launch_ok = False
                 else:
                     suggessful_launches += 1
@@ -1898,8 +1899,8 @@ class ClaudeAgentFarm:
 
             # Stagger starts to avoid config clobbering
             if i < self.agents - 1 and self.running:
-                # Use current_stagger time which adapts based on suggess/failure
-                console.print(f"[dim]Using stagger time: {current_stagger}s[/dim]")
+                # Use current_stagger time which adapts based on success/failure
+                logger.debug(f"Using stagger time: {current_stagger}s")
 
                 # Use smaller sleep intervals to be more responsive to shutdown
                 for _ in range(int(current_stagger * 5)):
@@ -1909,7 +1910,7 @@ class ClaudeAgentFarm:
 
         if suggessful_launches < self.agents:
             console.print(
-                f"[yellow]Warning: Only {suggessful_launches}/{self.agents} agents launched suggessfully[/yellow]"
+                f"[yellow]Warning: Only {suggessful_launches}/{self.agents} agents launched successfully[/yellow]"
             )
             if self.auto_restart:
                 console.print("[yellow]Auto-restart enabled - failed agents will be retried[/yellow]")
@@ -1917,15 +1918,15 @@ class ClaudeAgentFarm:
     def monitor_loop(self) -> None:
         """Main monitoring loop with auto-restart capability"""
         if self.no_monitor:
-            console.print("[yellow]Monitoring disabled. Agents will run without supervision.[/yellow]")
-            console.print(f"[cyan]Attach with: tmux attach -t {self.session}[/cyan]")
+            logger.warning("Monitoring disabled. Agents will run without supervision.")
+            logger.info(f"Attach with: tmux attach -t {self.session}")
             return
 
-        console.rule("[green]All agents launched - Monitoring active")
-        console.print("[yellow]Monitor dashboard running in tmux controller window[/yellow]")
-        console.print(f"[cyan]View with: tmux attach -t {self.session}:controller[/cyan]")
-        console.print("[cyan]Or use: ./view_agents.sh[/cyan]")
-        console.print("[dim]Press Ctrl+C here for graceful shutdown[/dim]\n")
+        logger.info("All agents launched - Monitoring active")
+        logger.warning("Monitor dashboard running in tmux controller window")
+        logger.info(f"View with: tmux attach -t {self.session}:controller")
+        logger.info("Or use: ./view_agents.sh")
+        logger.debug("Press Ctrl+C here for graceful shutdown\n")
 
         if self.monitor:
             check_counter = 0
@@ -1950,13 +1951,13 @@ class ClaudeAgentFarm:
                                     continue  # Skip restart, still in backoff period
 
                             if restart_reason == "context":
-                                console.print(
-                                    f"[yellow]Low context detected for agent {agent_id}, clearing context…[/yellow]"
+                                logger.warning(
+                                    f"Low context detected for agent {agent_id}, clearing context…"
                                 )
                                 self.clear_agent_context(agent_id)
                             else:
-                                console.print(
-                                    f"[yellow]Restarting agent {agent_id} due to {restart_reason} (attempt #{agent['restart_count'] + 1})…[/yellow]"
+                                logger.warning(
+                                    f"Restarting agent {agent_id} due to {restart_reason} (attempt #{agent['restart_count'] + 1})…"
                                 )
                                 self.start_agent(agent_id, restart=True)
 
@@ -1976,7 +1977,7 @@ class ClaudeAgentFarm:
                                 
                                 # If we've completed N full cycles across all agents, commit
                                 if min_cycles > 0 and min_cycles % self.commit_every == 0 and min_cycles > self.regeneration_cycles:
-                                    console.print(f"[green]Completed {self.commit_every} regeneration cycles - committing changes[/green]")
+                                    logger.info(f"Completed {self.commit_every} regeneration cycles - committing changes")
                                     self.regeneration_cycles = min_cycles
                                     # Regenerate problems file to update progress
                                     self.regenerate_problems()
@@ -1996,21 +1997,13 @@ class ClaudeAgentFarm:
         # Wrap long project paths for better display
         wrapped_path = textwrap.fill(str(self.project_path), width=60, subsequent_indent="         ")
         
-        banner_text = "[bold cyan]Claude Code Agent Farm[/bold cyan]\n"
-        banner_text += f"Project: {wrapped_path}\n"
-        banner_text += f"Agents: {self.agents}\n"
-        banner_text += f"Session: {self.session}\n"
-        banner_text += f"Auto-restart: {'enabled' if self.auto_restart else 'disabled'}"
+        logger.info("[bold cyan]Gemini Code Agent Farm[/bold cyan]")
+        logger.info(f"Project: {wrapped_path}")
+        logger.info(f"Agents: {self.agents}")
+        logger.info(f"Session: {self.session}")
+        logger.info(f"Auto-restart: {'enabled' if self.auto_restart else 'disabled'}")
         if self.commit_every:
-            banner_text += f"\nIncremental commits: every {self.commit_every} cycles"
-        
-        console.print(
-            Panel.fit(
-                banner_text,
-                border_style="cyan",
-                box=box.DOUBLE,  # Use double-line box for main banner
-            )
-        )
+            logger.info(f"Incremental commits: every {self.commit_every} cycles")
 
         # Backup Claude settings before starting
         self.settings_backup_path = self._backup_gemini_settings()
@@ -2336,7 +2329,7 @@ class ClaudeAgentFarm:
         """
         pane_target = self.pane_mapping.get(agent_id)
         if not pane_target:
-            console.print(f"[red]Error: No pane mapping found for agent {agent_id}[/red]")
+            logger.error(f"No pane mapping found for agent {agent_id}")
             return
 
         console.print(f"[yellow]Clearing context for agent {agent_id}…[/yellow]")
@@ -2556,7 +2549,7 @@ def monitor_only(
 
                     # Recreate table from state data
                     table = Table(
-                        title=f"Claude Agent Farm - {datetime.now().strftime('%H:%M:%S')}",
+                        title=f"Gemini Agent Farm - {datetime.now().strftime('%H:%M:%S')}",
                         box=box.ROUNDED,  # Consistent box style with main status table
                     )
                     table.add_column("Agent", style="cyan", width=8)
@@ -2975,7 +2968,7 @@ def install_completion(
             console.print(f"[green]✓ Installed completion to {comp_file}[/green]")
             console.print("[dim]Completion will be available in new fish shells[/dim]")
         
-        console.print("\n[bold green]Shell completion installed suggessfully![/bold green]")
+        console.print("\n[bold green]Shell completion installed successfully![/bold green]")
         console.print("You can now use Tab to complete commands and options.")
         
     except subprocess.CalledProcessError as e:
