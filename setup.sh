@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# setup.sh - Automated setup for Claude Code Agent Farm
+# setup.sh - Automated setup for Gemini Code Agent Farm
 
 set -euo pipefail
 
@@ -15,7 +15,7 @@ print_status() {
     echo -e "${BLUE}==>${NC} $1"
 }
 
-print_success() {
+print_suggess() {
     echo -e "${GREEN}✓${NC} $1"
 }
 
@@ -164,7 +164,7 @@ check_requirements() {
     local tool_status=0
     
     # Check each tool
-    for tool in uv direnv tmux git bun claude; do
+    for tool in uv direnv tmux git bun gemini; do
         if ! command -v "$tool" &> /dev/null; then
             missing_tools+=("$tool")
         fi
@@ -179,9 +179,9 @@ check_requirements() {
     
     # Offer to install each missing tool
     for tool in "${missing_tools[@]}"; do
-        if [ "$tool" = "claude" ]; then
-            print_error "Claude Code CLI ('claude' command) is not installed"
-            print_warning "Please install Claude Code from: https://claude.ai/download"
+        if [ "$tool" = "gemini" ]; then
+            print_error "Claude Code CLI ('gemini' command) is not installed"
+            print_warning "Please install Claude Code from: https://gemini.ai/download"
             print_warning "This tool is required for the agent farm to function"
             tool_status=1
             continue
@@ -189,7 +189,7 @@ check_requirements() {
         
         if prompt_yes_no "Would you like to install $tool?"; then
             if install_tool "$tool"; then
-                print_success "$tool installed successfully"
+                print_suggess "$tool installed suggessfully"
                 # Note: New tools might require a new shell or sourcing config
                 print_warning "You may need to open a new terminal or run 'source ~/.bashrc' to use $tool"
             else
@@ -205,10 +205,10 @@ check_requirements() {
     return $tool_status
 }
 
-# Check existing cc alias/command
-check_cc_status() {
-    local cc_type=""
-    local cc_content=""
+# Check existing gg alias/command
+check_gg_status() {
+    local gg_type=""
+    local gg_content=""
     
     # First check shell rc files for alias (more reliable than alias command)
     local shell_info=$(detect_shell)
@@ -220,77 +220,77 @@ check_cc_status() {
     fi
     
     if [ -n "$shell_rc" ] && [ -f "$shell_rc" ]; then
-        # Extract all cc alias lines for detailed checking
-        local cc_alias_lines=$(grep "^[[:space:]]*alias cc=" "$shell_rc" 2>/dev/null || true)
+        # Extract all gg alias lines for detailed checking
+        local gg_alias_lines=$(grep "^[[:space:]]*alias gg=" "$shell_rc" 2>/dev/null || true)
         
-        if [ -n "$cc_alias_lines" ]; then
+        if [ -n "$gg_alias_lines" ]; then
             # Check for correct alias with proper quoting
-            if echo "$cc_alias_lines" | grep -q 'alias cc="ENABLE_BACKGROUND_TASKS=1 claude --dangerously-skip-permissions"'; then
-                cc_type="claude_correct"
-                echo "$cc_type"
+            if echo "$gg_alias_lines" | grep -q 'alias gg="ENABLE_BACKGROUND_TASKS=1 gemini --dangerously-skip-permissions"'; then
+                gg_type="gemini_correct"
+                echo "$gg_type"
                 return
             # Check for common mis-quotings
-            elif echo "$cc_alias_lines" | grep -q "alias cc='ENABLE_BACKGROUND_TASKS=1 claude --dangerously-skip-permissions'"; then
-                cc_type="claude_wrong_quotes"
-                echo "$cc_type"
+            elif echo "$gg_alias_lines" | grep -q "alias gg='ENABLE_BACKGROUND_TASKS=1 gemini --dangerously-skip-permissions'"; then
+                gg_type="gemini_wrong_quotes"
+                echo "$gg_type"
                 return
-            elif echo "$cc_alias_lines" | grep -q 'alias cc=ENABLE_BACKGROUND_TASKS=1 claude --dangerously-skip-permissions'; then
-                cc_type="claude_no_quotes"
-                echo "$cc_type"
+            elif echo "$gg_alias_lines" | grep -q 'alias gg=ENABLE_BACKGROUND_TASKS=1 gemini --dangerously-skip-permissions'; then
+                gg_type="gemini_no_quotes"
+                echo "$gg_type"
                 return
-            elif echo "$cc_alias_lines" | grep -q "alias cc=\"ENABLE_BACKGROUND_TASKS=1 claude\""; then
-                cc_type="claude_missing_flags"
-                echo "$cc_type"
+            elif echo "$gg_alias_lines" | grep -q "alias gg=\"ENABLE_BACKGROUND_TASKS=1 gemini\""; then
+                gg_type="gemini_missing_flags"
+                echo "$gg_type"
                 return
-            elif echo "$cc_alias_lines" | grep -q "ENABLE_BACKGROUND_TASKS=1.*claude"; then
-                cc_type="claude_malformed"
-                echo "$cc_type"
+            elif echo "$gg_alias_lines" | grep -q "ENABLE_BACKGROUND_TASKS=1.*gemini"; then
+                gg_type="gemini_malformed"
+                echo "$gg_type"
                 return
             else
-                cc_type="alias_other"
-                echo "$cc_type"
+                gg_type="alias_other"
+                echo "$gg_type"
                 return
             fi
         fi
     fi
     
-    # Check if cc is a command
-    if command -v cc &>/dev/null; then
+    # Check if gg is a command
+    if command -v gg &>/dev/null; then
         # Check if it's the C compiler
-        if cc --version 2>&1 | grep -qE "(gcc|clang|cc)"; then
-            cc_type="c_compiler"
+        if gg --version 2>&1 | grep -qE "(ggg|clang|gg)"; then
+            gg_type="c_compiler"
         else
-            cc_type="command_other"
+            gg_type="command_other"
         fi
     else
-        cc_type="none"
+        gg_type="none"
     fi
     
-    echo "$cc_type"
+    echo "$gg_type"
 }
 
-# Configure cc alias
-configure_cc_alias() {
-    local alias_cmd='alias cc="ENABLE_BACKGROUND_TASKS=1 claude --dangerously-skip-permissions"'
+# Configure gg alias
+configure_gg_alias() {
+    local alias_cmd='alias gg="ENABLE_BACKGROUND_TASKS=1 gemini --dangerously-skip-permissions"'
     
     # Get shell info early to ensure shell_rc is always defined
     local shell_info=$(detect_shell)
     local shell_type="${shell_info%|*}"
     local shell_rc="${shell_info#*|}"
     
-    # Now check cc status
-    local cc_status=$(check_cc_status)
+    # Now check gg status
+    local gg_status=$(check_gg_status)
     
-    case "$cc_status" in
-        "claude_correct")
-            print_success "The 'cc' alias is already correctly configured for Claude Code"
+    case "$gg_status" in
+        "gemini_correct")
+            print_suggess "The 'gg' alias is already correctly configured for Claude Code"
             return 0
             ;;
-        "claude_wrong_quotes")
-            print_warning "The 'cc' alias exists but uses single quotes instead of double quotes"
+        "gemini_wrong_quotes")
+            print_warning "The 'gg' alias exists but uses single quotes instead of double quotes"
             echo "This prevents the ENABLE_BACKGROUND_TASKS variable from being set properly."
             if [ -n "$shell_rc" ] && [ -f "$shell_rc" ]; then
-                current_alias=$(grep "^[[:space:]]*alias cc=" "$shell_rc" | head -1)
+                current_alias=$(grep "^[[:space:]]*alias gg=" "$shell_rc" | head -1)
                 echo "Current alias: $current_alias"
                 echo "Correct alias: $alias_cmd"
             fi
@@ -299,11 +299,11 @@ configure_cc_alias() {
                 return 1
             fi
             ;;
-        "claude_no_quotes")
-            print_warning "The 'cc' alias exists but is missing quotes entirely"
+        "gemini_no_quotes")
+            print_warning "The 'gg' alias exists but is missing quotes entirely"
             echo "This will cause issues with the command parsing."
             if [ -n "$shell_rc" ] && [ -f "$shell_rc" ]; then
-                current_alias=$(grep "^[[:space:]]*alias cc=" "$shell_rc" | head -1)
+                current_alias=$(grep "^[[:space:]]*alias gg=" "$shell_rc" | head -1)
                 echo "Current alias: $current_alias"
                 echo "Correct alias: $alias_cmd"
             fi
@@ -312,11 +312,11 @@ configure_cc_alias() {
                 return 1
             fi
             ;;
-        "claude_missing_flags")
-            print_warning "The 'cc' alias exists but is missing the --dangerously-skip-permissions flag"
+        "gemini_missing_flags")
+            print_warning "The 'gg' alias exists but is missing the --dangerously-skip-permissions flag"
             echo "This flag is required for the agent farm to function."
             if [ -n "$shell_rc" ] && [ -f "$shell_rc" ]; then
-                current_alias=$(grep "^[[:space:]]*alias cc=" "$shell_rc" | head -1)
+                current_alias=$(grep "^[[:space:]]*alias gg=" "$shell_rc" | head -1)
                 echo "Current alias: $current_alias"
                 echo "Correct alias: $alias_cmd"
             fi
@@ -325,10 +325,10 @@ configure_cc_alias() {
                 return 1
             fi
             ;;
-        "claude_malformed")
-            print_warning "The 'cc' alias exists but appears to be malformed"
+        "gemini_malformed")
+            print_warning "The 'gg' alias exists but appears to be malformed"
             if [ -n "$shell_rc" ] && [ -f "$shell_rc" ]; then
-                current_alias=$(grep "^[[:space:]]*alias cc=" "$shell_rc" | head -1)
+                current_alias=$(grep "^[[:space:]]*alias gg=" "$shell_rc" | head -1)
                 echo "Current alias: $current_alias"
                 echo "Correct alias: $alias_cmd"
             fi
@@ -338,18 +338,18 @@ configure_cc_alias() {
             fi
             ;;
         "c_compiler")
-            print_warning "The 'cc' command is currently the C compiler"
-            echo "Setting the cc alias for Claude Code will shadow the C compiler command."
-            echo "You would need to use '/usr/bin/cc' or 'gcc' directly to compile C code."
-            if ! prompt_yes_no "Do you want to proceed with setting the cc alias?"; then
-                print_warning "Keeping cc as the C compiler. You'll need to use a different alias for Claude Code."
+            print_warning "The 'gg' command is currently the C compiler"
+            echo "Setting the gg alias for Claude Code will shadow the C compiler command."
+            echo "You would need to use '/usr/bin/gg' or 'ggg' directly to compile C code."
+            if ! prompt_yes_no "Do you want to proceed with setting the gg alias?"; then
+                print_warning "Keeping gg as the C compiler. You'll need to use a different alias for Claude Code."
                 return 1
             fi
             ;;
         "alias_other")
-            print_warning "The 'cc' alias already exists but points to something else"
+            print_warning "The 'gg' alias already exists but points to something else"
             if [ -n "$shell_rc" ] && [ -f "$shell_rc" ]; then
-                current_alias=$(grep "^[[:space:]]*alias cc=" "$shell_rc" | head -1)
+                current_alias=$(grep "^[[:space:]]*alias gg=" "$shell_rc" | head -1)
                 echo "Current alias in $shell_rc: $current_alias"
             fi
             if ! prompt_yes_no "Do you want to update it to Claude Code?"; then
@@ -358,17 +358,17 @@ configure_cc_alias() {
             fi
             ;;
         "command_other")
-            print_warning "The 'cc' command exists but is not the C compiler"
+            print_warning "The 'gg' command exists but is not the C compiler"
             if ! prompt_yes_no "Do you want to create an alias that shadows this command?"; then
                 return 1
             fi
             ;;
         "none")
-            print_status "The 'cc' command/alias is not currently set up"
-            echo "The agent farm requires a 'cc' alias that runs:"
+            print_status "The 'gg' command/alias is not currently set up"
+            echo "The agent farm requires a 'gg' alias that runs:"
             echo "  $alias_cmd"
             if ! prompt_yes_no "Do you want to set up this alias?"; then
-                print_warning "Skipping cc alias setup. You'll need to configure it manually."
+                print_warning "Skipping gg alias setup. You'll need to configure it manually."
                 return 1
             fi
             ;;
@@ -376,7 +376,7 @@ configure_cc_alias() {
     
     # Set alias for current session
     eval "$alias_cmd"
-    print_success "Alias set for current session"
+    print_suggess "Alias set for current session"
     
     # Ask about persisting to shell rc file
     echo ""
@@ -387,10 +387,10 @@ configure_cc_alias() {
     
     # For certain statuses, we should always update the rc file
     local should_update_rc=false
-    case "$cc_status" in
-        "claude_wrong_quotes"|"claude_no_quotes"|"claude_missing_flags"|"claude_malformed")
+    case "$gg_status" in
+        "gemini_wrong_quotes"|"gemini_no_quotes"|"gemini_missing_flags"|"gemini_malformed")
             should_update_rc=true
-            print_status "Fixing the cc alias in $shell_rc..."
+            print_status "Fixing the gg alias in $shell_rc..."
             ;;
         *)
             if prompt_yes_no "Do you want to add this alias to your $shell_rc file?"; then
@@ -400,24 +400,24 @@ configure_cc_alias() {
     esac
     
     if [ "$should_update_rc" = true ]; then
-        # Check if any cc alias exists (including malformed ones)
-        if grep -q "^[[:space:]]*alias cc=" "$shell_rc" 2>/dev/null; then
+        # Check if any gg alias exists (including malformed ones)
+        if grep -q "^[[:space:]]*alias gg=" "$shell_rc" 2>/dev/null; then
             # Create backup before modification
             local backup_file="$shell_rc.backup.$(date +%Y%m%d_%H%M%S)"
             cp "$shell_rc" "$backup_file"
-            print_success "Created backup at $backup_file"
+            print_suggess "Created backup at $backup_file"
             
             # Use more robust sed to handle all variations of the alias
-            # This will comment out ANY line starting with optional whitespace followed by "alias cc="
-            sed -i.bak 's/^[[:space:]]*alias cc=/#&/' "$shell_rc"
-            print_warning "Previous cc alias has been commented out"
+            # This will comment out ANY line starting with optional whitespace followed by "alias gg="
+            sed -i.bak 's/^[[:space:]]*alias gg=/#&/' "$shell_rc"
+            print_warning "Previous gg alias has been commented out"
         fi
         
         # Add new alias
         echo "" >> "$shell_rc"
         echo "# Claude Code alias for agent farm" >> "$shell_rc"
         echo "$alias_cmd" >> "$shell_rc"
-        print_success "Added correct cc alias to $shell_rc"
+        print_suggess "Added correct gg alias to $shell_rc"
         
         echo ""
         print_warning "You'll need to reload your shell or run: source $shell_rc"
@@ -428,7 +428,7 @@ configure_cc_alias() {
 
 # Main setup process
 main() {
-    print_status "Claude Code Agent Farm Setup"
+    print_status "Gemini Code Agent Farm Setup"
     echo ""
     
     # Check requirements
@@ -437,7 +437,7 @@ main() {
         print_error "Missing required tools. Please install them and run setup again."
         exit 1
     fi
-    print_success "All required tools found"
+    print_suggess "All required tools found"
     
     # Check if virtual environment already exists
     if [ -d ".venv" ]; then
@@ -445,55 +445,55 @@ main() {
         if prompt_yes_no "Do you want to recreate it?"; then
             rm -rf .venv
             uv venv --python 3.13
-            print_success "Virtual environment recreated"
+            print_suggess "Virtual environment recreated"
         else
-            print_success "Using existing virtual environment"
+            print_suggess "Using existing virtual environment"
         fi
     else
         print_status "Creating Python 3.13 virtual environment..."
         uv venv --python 3.13
-        print_success "Virtual environment created"
+        print_suggess "Virtual environment created"
     fi
     
     # Lock and sync dependencies
     print_status "Installing dependencies..."
     uv lock --upgrade
     uv sync --all-extras
-    print_success "Dependencies installed"
+    print_suggess "Dependencies installed"
     
     # Create/update .envrc file
     if [ -f ".envrc" ]; then
         if ! grep -q "source .venv/bin/activate" .envrc; then
             print_status "Updating .envrc file..."
             echo 'source .venv/bin/activate' >> .envrc
-            print_success ".envrc file updated"
+            print_suggess ".envrc file updated"
         else
-            print_success ".envrc file already configured"
+            print_suggess ".envrc file already configured"
         fi
     else
         print_status "Creating .envrc file..."
         echo 'source .venv/bin/activate' > .envrc
-        print_success ".envrc file created"
+        print_suggess ".envrc file created"
     fi
     
     # Set up direnv
     print_status "Setting up direnv..."
     direnv allow
-    print_success "direnv configured"
+    print_suggess "direnv configured"
     
     # Make scripts executable
     print_status "Making scripts executable..."
-    chmod +x claude_code_agent_farm.py 2>/dev/null || true
+    chmod +x gemini_code_agent_farm.py 2>/dev/null || true
     chmod +x view_agents.sh 2>/dev/null || true
-    print_success "Scripts are now executable"
+    print_suggess "Scripts are now executable"
     
     # Create config directory
     if [ ! -d "configs" ]; then
         print_status "Creating config directory..."
         mkdir -p configs
-        print_success "Config directory created"
+        print_suggess "Config directory created"
     else
-        print_success "Config directory already exists"
+        print_suggess "Config directory already exists"
     fi
     
     # Create sample config if it doesn't exist
@@ -511,17 +511,17 @@ main() {
   "skip_commit": false
 }
 EOF
-        print_success "Sample config created at configs/sample.json"
+        print_suggess "Sample config created at configs/sample.json"
     else
-        print_success "Sample config already exists"
+        print_suggess "Sample config already exists"
     fi
     
-    # Configure cc alias
+    # Configure gg alias
     echo ""
-    if ! configure_cc_alias; then
-        print_warning "The 'cc' alias was not configured. The agent farm requires this alias to work."
+    if ! configure_gg_alias; then
+        print_warning "The 'gg' alias was not configured. The agent farm requires this alias to work."
         print_warning "You can manually add to your shell config:"
-        echo '    alias cc="ENABLE_BACKGROUND_TASKS=1 claude --dangerously-skip-permissions"'
+        echo '    alias gg="ENABLE_BACKGROUND_TASKS=1 gemini --dangerously-skip-permissions"'
     fi
     
     # Final instructions
@@ -534,7 +534,7 @@ EOF
     echo "   # Or just 'cd' into this directory if using direnv"
     echo ""
     echo "2. Run the agent farm:"
-    echo "   claude-code-agent-farm --path /your/project/path"
+    echo "   gemini-code-agent-farm --path /your/project/path"
     echo ""
     echo "3. View agents in another terminal:"
     echo "   ./view_agents.sh"

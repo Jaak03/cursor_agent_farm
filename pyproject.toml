@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "claude-code-agent-farm"
+name = "gemini-code-agent-farm"
 version = "1.0.0"
 description = "Orchestrate multiple Claude Code agents for parallel code fixing"
 readme = "README.md"
@@ -53,21 +53,21 @@ docs = [
 
 # All optional dependencies
 all = [
-    "claude-code-agent-farm[dev,docs]",
+    "gemini-code-agent-farm[dev,docs]",
 ]
 
 [project.scripts]
-claude-code-agent-farm = "claude_code_agent_farm:app"
+gemini-code-agent-farm = "gemini_code_agent_farm:app"
 
 [project.urls]
-Homepage = "https://github.com/Dicklesworthstone/claude_code_agent_farm"
-Repository = "https://github.com/Dicklesworthstone/claude_code_agent_farm"
-Issues = "https://github.com/Dicklesworthstone/claude_code_agent_farm/issues"
-Documentation = "https://github.com/Dicklesworthstone/claude_code_agent_farm#readme"
+Homepage = "https://github.com/Dicklesworthstone/gemini_code_agent_farm"
+Repository = "https://github.com/Dicklesworthstone/gemini_code_agent_farm"
+Issues = "https://github.com/Dicklesworthstone/gemini_code_agent_farm/issues"
+Documentation = "https://github.com/Dicklesworthstone/gemini_code_agent_farm#readme"
 
 # Configure Hatchling
 [tool.hatch.build.targets.wheel]
-packages = ["claude_code_agent_farm.py"]
+packages = ["gemini_code_agent_farm.py"]
 
 [tool.hatch.build.targets.sdist]
 exclude = [
@@ -126,7 +126,7 @@ indent-style = "space"
 docstring-code-format = true
 
 [tool.ruff.lint.isort]
-known-first-party = ["claude_code_agent_farm"]
+known-first-party = ["gemini_code_agent_farm"]
 combine-as-imports = true
 
 [tool.mypy]
@@ -145,13 +145,13 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = [
     "--strict-markers",
-    "--cov=claude_code_agent_farm",
+    "--cov=gemini_code_agent_farm",
     "--cov-report=term-missing",
     "--cov-report=html",
 ]
 
 [tool.coverage.run]
-source = ["claude_code_agent_farm"]
+source = ["gemini_code_agent_farm"]
 omit = ["tests/*", "*/conftest.py"]
 
 [tool.coverage.report]

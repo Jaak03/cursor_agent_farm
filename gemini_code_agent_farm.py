@@ -59,7 +59,7 @@ def interruptible_confirm(message: str, default: bool = False) -> bool:
 
 # ─────────────────────────────── Constants ────────────────────────────────── #
 
-MONITOR_STATE_FILE = ".claude_agent_farm_state.json"
+MONITOR_STATE_FILE = ".gemini_agent_farm_state.json"
 
 # ─────────────────────────────── Helper Functions ─────────────────────────── #
 
@@ -307,7 +307,7 @@ class AgentMonitor:
                 return int(match.group(1))
         return None
 
-    def is_claude_ready(self, content: str) -> bool:
+    def is_gemini_ready(self, content: str) -> bool:
         """Check if Claude Code is ready for input"""
         # Multiple possible indicators that Claude is ready
         ready_indicators = [
@@ -322,7 +322,7 @@ class AgentMonitor:
         ]
         return any(ready_indicators)
 
-    def is_claude_working(self, content: str) -> bool:
+    def is_gemini_working(self, content: str) -> bool:
         """Check if Claude Code is actively working"""
         indicators = ["✻ Pontificating", "● Bash(", "✻ Running", "✻ Thinking", "esc to interrupt"]
         return any(indicator in content for indicator in indicators)
@@ -345,13 +345,13 @@ class AgentMonitor:
     def has_settings_error(self, content: str) -> bool:
         """Check for settings corruption"""
         # First check if Claude is actually ready (avoid false positives)
-        if self.is_claude_ready(content):
+        if self.is_gemini_ready(content):
             return False
             
         error_indicators = [
             # Login/auth prompts
             "Select login method:",
-            "Claude account with subscription",
+            "Claude aggount with subscription",
             "Sign in to Claude",
             "Log in to Claude",
             "Enter your API key",
@@ -384,9 +384,9 @@ class AgentMonitor:
             "ParseError",
             # Other login-related text
             "Choose your login method",
-            "Continue with Claude account",
-            "I have a Claude account",
-            "Create account",
+            "Continue with Claude aggount",
+            "I have a Claude aggount",
+            "Create aggount",
         ]
         return any(indicator in content for indicator in error_indicators)
 
@@ -415,7 +415,7 @@ class AgentMonitor:
             prev_status = agent.get("status", "unknown")
             
             # Update status based on activity
-            if self.is_claude_working(content):
+            if self.is_gemini_working(content):
                 # If transitioning to working, record cycle start time
                 if prev_status != "working" and agent["cycle_start_time"] is None:
                     agent["cycle_start_time"] = datetime.now()
@@ -424,7 +424,7 @@ class AgentMonitor:
                 agent["last_activity"] = datetime.now()
                 # Update heartbeat when agent is actively working
                 self._update_heartbeat(agent_id)
-            elif self.is_claude_ready(content):
+            elif self.is_gemini_ready(content):
                 # If transitioning from working to ready, record cycle time
                 if prev_status == "working" and agent["cycle_start_time"] is not None:
                     cycle_time = (datetime.now() - agent["cycle_start_time"]).total_seconds()
@@ -615,9 +615,9 @@ class ClaudeAgentFarm:
         self,
         path: str,
         agents: int = 6,
-        session: str = "claude_agents",
+        session: str = "gemini_agents",
         stagger: float = 10.0,  # Increased from 4.0 to prevent settings clobbering
-        wait_after_cc: float = 15.0,  # Increased from 8.0 to ensure Claude Code is fully ready
+        wait_after_gg: float = 15.0,  # Increased from 8.0 to ensure Claude Code is fully ready
         check_interval: int = 10,
         skip_regenerate: bool = False,
         skip_commit: bool = False,
@@ -640,7 +640,7 @@ class ClaudeAgentFarm:
         self.agents = agents
         self.session = session
         self.stagger = stagger
-        self.wait_after_cc = wait_after_cc
+        self.wait_after_gg = wait_after_gg
         self.check_interval = check_interval
         self.skip_regenerate = skip_regenerate
         self.skip_commit = skip_commit
@@ -712,7 +712,7 @@ class ClaudeAgentFarm:
         if config_file.exists():
             with config_file.open() as f:
                 config_data = json.load(f)
-                # Accept all config values, not just existing attributes
+                # Aggept all config values, not just existing attributes
                 for key, value in config_data.items():
                     setattr(self, key, value)
 
@@ -732,7 +732,7 @@ class ClaudeAgentFarm:
                 try:
                     if hasattr(self, "state_file") and self.state_file.exists():
                         self.state_file.unlink()
-                    lock_file = Path.home() / ".claude" / ".agent_farm_launch.lock"
+                    lock_file = Path.home() / ".gemini" / ".agent_farm_launch.lock"
                     if lock_file.exists():
                         lock_file.unlink()
                 except Exception:
@@ -754,28 +754,28 @@ class ClaudeAgentFarm:
                 console.print("\n[yellow]Received termination signal. Shutting down gracefully...[/yellow]")
                 self.running = False
 
-    def _backup_claude_settings(self) -> Optional[str]:
+    def _backup_gemini_settings(self) -> Optional[str]:
         """Backup essential Claude Code settings (excluding large caches)"""
-        claude_dir = Path.home() / ".claude"
-        if not claude_dir.exists():
+        gemini_dir = Path.home() / ".gemini"
+        if not gemini_dir.exists():
             console.print("[yellow]No Claude Code directory found to backup[/yellow]")
             return None
         
         try:
             # Create backup directory in project
-            backup_dir = self.project_path / ".claude_agent_farm_backups"
+            backup_dir = self.project_path / ".gemini_agent_farm_backups"
             backup_dir.mkdir(exist_ok=True)
             
             # Create timestamped backup filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_type = "full" if self.full_backup else "essential"
-            backup_file = backup_dir / f"claude_backup_{backup_type}_{timestamp}.tar.gz"
+            backup_file = backup_dir / f"gemini_backup_{backup_type}_{timestamp}.tar.gz"
             
             # Create compressed backup
             import tarfile
             
             if self.full_backup:
-                console.print("[dim]Creating FULL backup of ~/.claude directory (this may take a while)...[/dim]")
+                console.print("[dim]Creating FULL backup of ~/.gemini directory (this may take a while)...[/dim]")
                 
                 with tarfile.open(backup_file, "w:gz") as tar:
                     # Use filter to preserve all metadata
@@ -786,7 +786,7 @@ class ClaudeAgentFarm:
                         tarinfo.gid = os.getgid()
                         return tarinfo
                     
-                    tar.add(claude_dir, arcname="claude", filter=reset_ids)
+                    tar.add(gemini_dir, arcname="gemini", filter=reset_ids)
                 
                 size_mb = backup_file.stat().st_size / (1024 * 1024)
                 console.print(f"[green]✓ Full backup completed: {backup_file.name} ({size_mb:.1f} MB)[/green]")
@@ -801,27 +801,27 @@ class ClaudeAgentFarm:
                         return tarinfo
                     
                     # Add settings.json if it exists
-                    settings_file = claude_dir / "settings.json"
+                    settings_file = gemini_dir / "settings.json"
                     if settings_file.exists():
-                        tar.add(settings_file, arcname="claude/settings.json", filter=reset_ids)
+                        tar.add(settings_file, arcname="gemini/settings.json", filter=reset_ids)
                     
                     # Add ide directory (usually empty or small)
-                    ide_dir = claude_dir / "ide"
+                    ide_dir = gemini_dir / "ide"
                     if ide_dir.exists():
-                        tar.add(ide_dir, arcname="claude/ide", filter=reset_ids)
+                        tar.add(ide_dir, arcname="gemini/ide", filter=reset_ids)
                     
                     # Add statsig directory (small, contains feature flags)
-                    statsig_dir = claude_dir / "statsig"
+                    statsig_dir = gemini_dir / "statsig"
                     if statsig_dir.exists():
-                        tar.add(statsig_dir, arcname="claude/statsig", filter=reset_ids)
+                        tar.add(statsig_dir, arcname="gemini/statsig", filter=reset_ids)
                     
                     # Optionally add todos (usually small)
-                    todos_dir = claude_dir / "todos"
+                    todos_dir = gemini_dir / "todos"
                     if todos_dir.exists():
                         # Check size first
                         todos_size = sum(f.stat().st_size for f in todos_dir.rglob("*") if f.is_file())
                         if todos_size < 10 * 1024 * 1024:  # Less than 10MB
-                            tar.add(todos_dir, arcname="claude/todos", filter=reset_ids)
+                            tar.add(todos_dir, arcname="gemini/todos", filter=reset_ids)
                         else:
                             console.print(f"[dim]Skipping todos directory ({todos_size / 1024 / 1024:.1f} MB)[/dim]")
                     
@@ -844,7 +844,7 @@ class ClaudeAgentFarm:
         """Remove old backups, keeping only the most recent ones and enforcing size limit"""
         try:
             # Find all backup files (both essential and full)
-            backups = sorted(backup_dir.glob("claude_backup_*.tar.gz"), key=lambda p: p.stat().st_mtime, reverse=True)
+            backups = sorted(backup_dir.glob("gemini_backup_*.tar.gz"), key=lambda p: p.stat().st_mtime, reverse=True)
             
             # Calculate total size and remove old backups based on both count and size limits
             total_size_bytes = 0
@@ -882,7 +882,7 @@ class ClaudeAgentFarm:
         except Exception as e:
             console.print(f"[yellow]Warning: Could not clean up old backups: {e}[/yellow]")
 
-    def _restore_claude_settings(self, backup_path: Optional[str] = None) -> bool:
+    def _restore_gemini_settings(self, backup_path: Optional[str] = None) -> bool:
         """Restore Claude Code settings from backup"""
         try:
             # If no backup path provided, use the most recent one
@@ -898,17 +898,17 @@ class ClaudeAgentFarm:
                 console.print(f"[red]Backup file not found: {backup_path}[/red]")
                 return False
             
-            claude_dir = Path.home() / ".claude"
+            gemini_dir = Path.home() / ".gemini"
             
             # For partial backups, we don't need to remove the entire directory
             # Just extract over existing files
             try:
-                # Ensure claude directory exists
-                claude_dir.mkdir(exist_ok=True)
+                # Ensure gemini directory exists
+                gemini_dir.mkdir(exist_ok=True)
                 
                 # Save original metadata of existing files
                 existing_metadata = {}
-                for item in claude_dir.rglob("*"):
+                for item in gemini_dir.rglob("*"):
                     if item.exists():
                         stat = item.stat()
                         existing_metadata[str(item)] = {
@@ -923,18 +923,18 @@ class ClaudeAgentFarm:
                 
                 with tarfile.open(backup_file, "r:gz") as tar:
                     # Extract with numeric owner to preserve permissions
-                    tar.extractall(path=claude_dir.parent, numeric_owner=True)
+                    tar.extractall(path=gemini_dir.parent, numeric_owner=True)
                     
                     # Get list of extracted files to preserve their times
                     for member in tar.getmembers():
                         if member.isfile():
-                            extracted_path = claude_dir.parent / member.name
+                            extracted_path = gemini_dir.parent / member.name
                             if extracted_path.exists():
                                 # Preserve the modification time from the archive
                                 os.utime(extracted_path, (member.mtime, member.mtime))
                 
                 # Ensure proper permissions on sensitive files
-                settings_file = claude_dir / "settings.json"
+                settings_file = gemini_dir / "settings.json"
                 if settings_file.exists():
                     # Ensure settings.json has appropriate permissions (readable by user only)
                     os.chmod(settings_file, 0o600)
@@ -943,7 +943,7 @@ class ClaudeAgentFarm:
                 uid = os.getuid()
                 gid = os.getgid()
                 
-                for root, dirs, files in os.walk(claude_dir):
+                for root, dirs, files in os.walk(gemini_dir):
                     for d in dirs:
                         path = Path(root) / d
                         with contextlib.suppress(Exception):
@@ -956,7 +956,7 @@ class ClaudeAgentFarm:
                 console.print("[green]✓ Restored Claude settings from backup[/green]")
                 
                 # Check and fix permissions after restore
-                self._check_claude_permissions()
+                self._check_gemini_permissions()
                 
                 return True
                 
@@ -1308,7 +1308,7 @@ class ClaudeAgentFarm:
 
         # ------------------------- Active probe setup ------------------------- #
         # Some shell configurations use very minimal or custom prompts that the
-        # passive heuristics below cannot reliably detect.  To accommodate a
+        # passive heuristics below cannot reliably detect.  To aggommodate a
         # wider variety of prompts we fall back to sending an `echo` command
         # containing a unique marker and waiting for that marker to appear in
         # the captured pane output.  These variables keep track of the probe
@@ -1361,7 +1361,7 @@ class ClaudeAgentFarm:
             # ------------------------------------------------------------------ #
             # Active probe logic - short-circuit the function as soon as we see
             # the unique probe marker in the pane output, which demonstrates
-            # that the shell is accepting and executing commands.
+            # that the shell is aggepting and executing commands.
             # ------------------------------------------------------------------ #
             elapsed = time.time() - start_time
 
@@ -1372,7 +1372,7 @@ class ClaudeAgentFarm:
                 tmux_send(pane_target, "clear", enter=True, update_heartbeat=False)
                 return True
 
-            # 2) If passive detection has not succeeded within ~3 s, send probe.
+            # 2) If passive detection has not suggeeded within ~3 s, send probe.
             if (not probe_attempted) and (elapsed > 3):
                 probe_attempted = True
                 from random import randint  # local import to avoid top-of-file churn
@@ -1570,9 +1570,9 @@ class ClaudeAgentFarm:
 
         console.print(f"[green]✓ Created session with {self.agents} panes[/green]")
 
-    def _acquire_claude_lock(self, timeout: float = 5.0) -> bool:
+    def _acquire_gemini_lock(self, timeout: float = 5.0) -> bool:
         """Acquire a lock file to prevent concurrent Claude Code launches"""
-        lock_file = Path.home() / ".claude" / ".agent_farm_launch.lock"
+        lock_file = Path.home() / ".gemini" / ".agent_farm_launch.lock"
         lock_file.parent.mkdir(exist_ok=True)
 
         start_time = time.time()
@@ -1597,16 +1597,16 @@ class ClaudeAgentFarm:
 
         return False
 
-    def _release_claude_lock(self) -> None:
+    def _release_gemini_lock(self) -> None:
         """Release the Claude Code launch lock"""
-        lock_file = Path.home() / ".claude" / ".agent_farm_launch.lock"
+        lock_file = Path.home() / ".gemini" / ".agent_farm_launch.lock"
         with contextlib.suppress(Exception):
             lock_file.unlink()
 
-    def _check_claude_permissions(self) -> bool:
+    def _check_gemini_permissions(self) -> bool:
         """Check and fix permissions on Claude settings files"""
-        claude_dir = Path.home() / ".claude"
-        settings_file = claude_dir / "settings.json"
+        gemini_dir = Path.home() / ".gemini"
+        settings_file = gemini_dir / "settings.json"
         
         try:
             if settings_file.exists():
@@ -1629,11 +1629,11 @@ class ClaudeAgentFarm:
                         return False
             
             # Check directory permissions
-            if claude_dir.exists():
-                dir_mode = claude_dir.stat().st_mode & 0o777
+            if gemini_dir.exists():
+                dir_mode = gemini_dir.stat().st_mode & 0o777
                 if dir_mode not in (0o700, 0o755):
-                    console.print(f"[yellow]Fixing permissions on .claude directory (was {oct(dir_mode)})[/yellow]")
-                    os.chmod(claude_dir, 0o700)
+                    console.print(f"[yellow]Fixing permissions on .gemini directory (was {oct(dir_mode)})[/yellow]")
+                    os.chmod(gemini_dir, 0o700)
             
             return True
             
@@ -1664,15 +1664,15 @@ class ClaudeAgentFarm:
         
         # CRITICAL: Wait a couple seconds for cd to complete and shell to stabilize
         # This prevents race conditions and ensures we're in the right directory
-        console.print(f"[dim]Agent {agent_id:02d}: Waiting 2s after cd before launching cc...[/dim]")
+        console.print(f"[dim]Agent {agent_id:02d}: Waiting 2s after cd before launching gg...[/dim]")
         time.sleep(2.0)
 
-        # Acquire lock before launching cc to prevent config corruption
+        # Acquire lock before launching gg to prevent config corruption
         lock_acquired = False
-        if not self._acquire_claude_lock(timeout=10.0):
-            console.print(f"[yellow]Agent {agent_id:02d}: Waiting for lock to launch cc...[/yellow]")
+        if not self._acquire_gemini_lock(timeout=10.0):
+            console.print(f"[yellow]Agent {agent_id:02d}: Waiting for lock to launch gg...[/yellow]")
             # Try once more with longer timeout
-            if not self._acquire_claude_lock(timeout=20.0):
+            if not self._acquire_gemini_lock(timeout=20.0):
                 console.print(f"[red]Agent {agent_id:02d}: Could not acquire lock - aborting launch[/red]")
                 if self.monitor:
                     self.monitor.agents[agent_id]["status"] = "error"
@@ -1681,24 +1681,24 @@ class ClaudeAgentFarm:
 
         lock_acquired = True
         try:
-            tmux_send(pane_target, "cc")
+            tmux_send(pane_target, "gg")
 
             if not restart:
-                console.print(f"🛠  Agent {agent_id:02d}: launching cc, waiting {self.wait_after_cc}s...")
+                console.print(f"🛠  Agent {agent_id:02d}: launching gg, waiting {self.wait_after_gg}s...")
 
-            # Make wait_after_cc interruptible
-            for _ in range(int(self.wait_after_cc * 5)):
+            # Make wait_after_gg interruptible
+            for _ in range(int(self.wait_after_gg * 5)):
                 if not self.running:
                     return
                 time.sleep(0.2)
         finally:
             # Always release lock
             if lock_acquired:
-                self._release_claude_lock()
+                self._release_gemini_lock()
 
-        # Verify Claude Code started successfully
+        # Verify Claude Code started suggessfully
         max_retries = 5
-        claude_started_successfully = False
+        gemini_started_suggessfully = False
 
         # Give Claude Code a bit more time to fully initialize before first check
         time.sleep(2.0)
@@ -1722,13 +1722,13 @@ class ClaudeAgentFarm:
 
             # Check for various failure conditions
             if not content or len(content.strip()) < 10:
-                # Empty or nearly empty content indicates cc didn't start
+                # Empty or nearly empty content indicates gg didn't start
                 console.print(
                     f"[yellow]Agent {agent_id:02d}: No output from Claude Code yet (attempt {attempt + 1}/{max_retries})[/yellow]"
                 )
-            elif self.monitor and self.monitor.is_claude_ready(content):
+            elif self.monitor and self.monitor.is_gemini_ready(content):
                 # Check for readiness FIRST before checking for errors
-                claude_started_successfully = True
+                gemini_started_suggessfully = True
                 break
             elif self.monitor and len(content.strip()) > 100 and (
                 self.monitor.has_settings_error(content) or self.monitor.has_welcome_screen(content)
@@ -1738,7 +1738,7 @@ class ClaudeAgentFarm:
                     f"[red]Agent {agent_id:02d}: Settings error/setup screen detected - attempting restore[/red]"
                 )
 
-                # Kill this cc instance more forcefully
+                # Kill this gg instance more forcefully
                 console.print(f"[yellow]Agent {agent_id:02d}: Killing corrupted Claude Code instance...[/yellow]")
                 tmux_send(pane_target, "\x03")  # Ctrl+C
                 time.sleep(0.5)
@@ -1757,13 +1757,13 @@ class ClaudeAgentFarm:
                     tmux_send(pane_target, "exit")  # Try shell exit command
                     time.sleep(1.0)
                 
-                # NEVER EVER kill all claude-code processes! This would kill ALL working agents!
+                # NEVER EVER kill all gemini-code processes! This would kill ALL working agents!
                 # Just let this specific instance clean up naturally
                 time.sleep(2.0)  # Give time for this instance to fully exit
 
                 # Try to restore from backup
                 if hasattr(self, "settings_backup_path") and self.settings_backup_path:  # noqa: SIM102
-                    if self._restore_claude_settings():
+                    if self._restore_gemini_settings():
                         console.print(f"[green]Settings restored for agent {agent_id} - retrying launch[/green]")
                         # Wait a bit more to ensure everything is settled
                         time.sleep(2.0)
@@ -1771,12 +1771,12 @@ class ClaudeAgentFarm:
                         # Return to shell and retry
                         if self._wait_for_shell_prompt(pane_target, timeout=10, ignore_shutdown=True):
                             # Re-acquire lock before retrying
-                            if self._acquire_claude_lock(timeout=10.0):
+                            if self._acquire_gemini_lock(timeout=10.0):
                                 try:
-                                    tmux_send(pane_target, "cc")
-                                    time.sleep(self.wait_after_cc)
+                                    tmux_send(pane_target, "gg")
+                                    time.sleep(self.wait_after_gg)
                                 finally:
-                                    self._release_claude_lock()
+                                    self._release_gemini_lock()
                                 # Continue to next iteration to check again
                                 continue
                             else:
@@ -1788,9 +1788,9 @@ class ClaudeAgentFarm:
                     self.monitor.agents[agent_id]["status"] = "error"
                     self.monitor.agents[agent_id]["errors"] += 1
                 return
-            elif "command not found" in content and "cc" in content:
-                # cc command doesn't exist
-                console.print(f"[red]Agent {agent_id:02d}: 'cc' command not found[/red]")
+            elif "command not found" in content and "gg" in content:
+                # gg command doesn't exist
+                console.print(f"[red]Agent {agent_id:02d}: 'gg' command not found[/red]")
                 if self.monitor:
                     self.monitor.agents[agent_id]["status"] = "error"
                     self.monitor.agents[agent_id]["errors"] += 1
@@ -1810,8 +1810,8 @@ class ClaudeAgentFarm:
                     self.monitor.agents[agent_id]["errors"] += 1
                 return
 
-        # Only send prompt if Claude Code started successfully
-        if not claude_started_successfully:
+        # Only send prompt if Claude Code started suggessfully
+        if not gemini_started_suggessfully:
             console.print(f"[red]Agent {agent_id:02d}: Skipping prompt injection - Claude Code not ready[/red]")
             return
 
@@ -1853,7 +1853,7 @@ class ClaudeAgentFarm:
         # Verify prompt was received by checking for working state
         time.sleep(2.0)  # Give Claude a moment to start processing
         verify_content = tmux_capture(pane_target)
-        if self.monitor and self.monitor.is_claude_working(verify_content):
+        if self.monitor and self.monitor.is_gemini_working(verify_content):
             console.print(f"[green]✓ Agent {agent_id:02d}: Claude Code is processing the prompt[/green]")
         else:
             console.print(f"[yellow]⚠ Agent {agent_id:02d}: Claude Code may not have received the prompt properly[/yellow]")
@@ -1866,9 +1866,9 @@ class ClaudeAgentFarm:
         """Launch all agents with staggered start times"""
         console.rule("[yellow]Launching agents")
 
-        # Track successful launches to detect corruption patterns
-        successful_launches = 0
-        last_launch_ok = True  # Track if the previous launch was successful
+        # Track suggessful launches to detect corruption patterns
+        suggessful_launches = 0
+        last_launch_ok = True  # Track if the previous launch was suggessful
         current_stagger = self.stagger  # Start with base stagger time
 
         for i in range(self.agents):
@@ -1878,7 +1878,7 @@ class ClaudeAgentFarm:
 
             self.start_agent(i)
 
-            # Check if last agent started successfully
+            # Check if last agent started suggessfully
             if self.monitor and i > 0:
                 time.sleep(1)  # Brief pause to let status update
                 prev_agent_status = self.monitor.agents[i]["status"]
@@ -1889,16 +1889,16 @@ class ClaudeAgentFarm:
                         console.print(f"[yellow]Launch failure detected - increasing stagger to {current_stagger}s[/yellow]")
                     last_launch_ok = False
                 else:
-                    successful_launches += 1
+                    suggessful_launches += 1
                     if not last_launch_ok:
-                        # Previous launch failed, but this one succeeded - halve stagger
+                        # Previous launch failed, but this one suggeeded - halve stagger
                         current_stagger = max(current_stagger / 2, self.stagger)  # Don't go below base
-                        console.print(f"[green]Launch successful - reducing stagger to {current_stagger}s[/green]")
+                        console.print(f"[green]Launch suggessful - reducing stagger to {current_stagger}s[/green]")
                     last_launch_ok = True
 
             # Stagger starts to avoid config clobbering
             if i < self.agents - 1 and self.running:
-                # Use current_stagger time which adapts based on success/failure
+                # Use current_stagger time which adapts based on suggess/failure
                 console.print(f"[dim]Using stagger time: {current_stagger}s[/dim]")
 
                 # Use smaller sleep intervals to be more responsive to shutdown
@@ -1907,9 +1907,9 @@ class ClaudeAgentFarm:
                         break
                     time.sleep(0.2)
 
-        if successful_launches < self.agents:
+        if suggessful_launches < self.agents:
             console.print(
-                f"[yellow]Warning: Only {successful_launches}/{self.agents} agents launched successfully[/yellow]"
+                f"[yellow]Warning: Only {suggessful_launches}/{self.agents} agents launched suggessfully[/yellow]"
             )
             if self.auto_restart:
                 console.print("[yellow]Auto-restart enabled - failed agents will be retried[/yellow]")
@@ -2013,10 +2013,10 @@ class ClaudeAgentFarm:
         )
 
         # Backup Claude settings before starting
-        self.settings_backup_path = self._backup_claude_settings()
+        self.settings_backup_path = self._backup_gemini_settings()
         
         # Check current permissions are correct
-        self._check_claude_permissions()
+        self._check_gemini_permissions()
         
         # Copy best practices guides if configured
         self._copy_best_practices_guides()
@@ -2105,7 +2105,7 @@ class ClaudeAgentFarm:
             if hasattr(self, "state_file") and self.state_file.exists():
                 self.state_file.unlink()
             # Clean up lock file
-            lock_file = Path.home() / ".claude" / ".agent_farm_launch.lock"
+            lock_file = Path.home() / ".gemini" / ".agent_farm_launch.lock"
             if lock_file.exists():
                 lock_file.unlink()
 
@@ -2303,8 +2303,8 @@ class ClaudeAgentFarm:
         patterns = [
             "# Claude Agent Farm",  # marker comment
             ".heartbeats/",
-            ".claude_agent_farm_state.json",
-            ".claude_agent_farm_backups/",
+            ".gemini_agent_farm_state.json",
+            ".gemini_agent_farm_backups/",
             "agent_farm_report_*.html",
         ]
 
@@ -2389,13 +2389,13 @@ def main(
         20, "--agents", "-n", help="Number of Claude agents", rich_help_panel="Agent Configuration"
     ),
     session: str = typer.Option(
-        "claude_agents", "--session", "-s", help="tmux session name", rich_help_panel="Agent Configuration"
+        "gemini_agents", "--session", "-s", help="tmux session name", rich_help_panel="Agent Configuration"
     ),
     stagger: float = typer.Option(
         10.0, "--stagger", help="Seconds between starting agents", rich_help_panel="Timing Configuration"
     ),
-    wait_after_cc: float = typer.Option(
-        15.0, "--wait-after-cc", help="Seconds to wait after launching cc", rich_help_panel="Timing Configuration"
+    wait_after_gg: float = typer.Option(
+        15.0, "--wait-after-gg", help="Seconds to wait after launching gg", rich_help_panel="Timing Configuration"
     ),
     check_interval: int = typer.Option(
         10, "--check-interval", help="Seconds between agent health checks", rich_help_panel="Timing Configuration"
@@ -2487,7 +2487,7 @@ def main(
         agents=agents,
         session=session,
         stagger=stagger,
-        wait_after_cc=wait_after_cc,
+        wait_after_gg=wait_after_gg,
         check_interval=check_interval,
         skip_regenerate=skip_regenerate,
         skip_commit=skip_commit,
@@ -2524,7 +2524,7 @@ def main(
 @app.command(name="monitor-only", hidden=True)
 def monitor_only(
     path: str = typer.Option(..., "--path", help="Absolute path to project root"),
-    session: str = typer.Option("claude_agents", "--session", "-s", help="tmux session name"),
+    session: str = typer.Option("gemini_agents", "--session", "-s", help="tmux session name"),
 ) -> None:
     """Run monitor display only - internal command used by the orchestrator"""
     project_path = Path(path).expanduser().resolve()
@@ -2653,44 +2653,44 @@ def doctor(
         console.print("  ❌ tmux not found in PATH")
         issues_found += 1
     
-    # 3. Check cc alias
+    # 3. Check gg alias
     console.print("\n[bold]3. Claude Code Alias[/bold]")
     # Check in bash
-    bash_has_cc = False
+    bash_has_gg = False
     try:
-        ret, stdout, _ = run("bash -i -c 'alias cc 2>/dev/null'", capture=True, quiet=True)
-        if ret == 0 and "claude" in stdout and "--dangerously-skip-permissions" in stdout:
-            bash_has_cc = True
+        ret, stdout, _ = run("bash -i -c 'alias gg 2>/dev/null'", capture=True, quiet=True)
+        if ret == 0 and "gemini" in stdout and "--dangerously-skip-permissions" in stdout:
+            bash_has_gg = True
     except Exception:
         pass
     
     # Check in zsh if it exists
-    zsh_has_cc = False
+    zsh_has_gg = False
     if Path(os.path.expanduser("~/.zshrc")).exists():
         try:
-            ret, stdout, _ = run("zsh -i -c 'alias cc 2>/dev/null'", capture=True, quiet=True)
-            if ret == 0 and "claude" in stdout and "--dangerously-skip-permissions" in stdout:
-                zsh_has_cc = True
+            ret, stdout, _ = run("zsh -i -c 'alias gg 2>/dev/null'", capture=True, quiet=True)
+            if ret == 0 and "gemini" in stdout and "--dangerously-skip-permissions" in stdout:
+                zsh_has_gg = True
         except Exception:
             pass
     
-    if bash_has_cc or zsh_has_cc:
-        console.print("  ✅ cc alias configured correctly")
-        if bash_has_cc:
+    if bash_has_gg or zsh_has_gg:
+        console.print("  ✅ gg alias configured correctly")
+        if bash_has_gg:
             console.print("     - Found in bash")
-        if zsh_has_cc:
+        if zsh_has_gg:
             console.print("     - Found in zsh")
     else:
-        console.print("  ❌ cc alias not configured or incorrect")
-        console.print("     Expected: alias cc=\"ENABLE_BACKGROUND_TASKS=1 claude --dangerously-skip-permissions\"")
+        console.print("  ❌ gg alias not configured or incorrect")
+        console.print("     Expected: alias gg=\"ENABLE_BACKGROUND_TASKS=1 gemini --dangerously-skip-permissions\"")
         issues_found += 1
     
     # 4. Check Claude Code installation
     console.print("\n[bold]4. Claude Code Installation[/bold]")
-    if command_exists("claude"):
-        console.print("  ✅ claude command found")
+    if command_exists("gemini"):
+        console.print("  ✅ gemini command found")
     else:
-        console.print("  ❌ claude command not found in PATH")
+        console.print("  ❌ gemini command not found in PATH")
         issues_found += 1
     
     # 5. Check Anthropic API key
@@ -2700,10 +2700,10 @@ def doctor(
         console.print(f"  ✅ ANTHROPIC_API_KEY set ({len(api_key)} chars)")
     else:
         # Check Claude settings file
-        claude_settings = Path.home() / ".claude" / "settings.json"
-        if claude_settings.exists():
+        gemini_settings = Path.home() / ".gemini" / "settings.json"
+        if gemini_settings.exists():
             try:
-                with claude_settings.open() as f:
+                with gemini_settings.open() as f:
                     settings = json.load(f)
                     if settings.get("apiKey") or settings.get("anthropicApiKey"):
                         console.print("  ✅ API key found in Claude settings")
@@ -2790,18 +2790,18 @@ def doctor(
     
     # 9. Check permissions
     console.print("\n[bold]9. File Permissions[/bold]")
-    claude_dir = Path.home() / ".claude"
-    if claude_dir.exists():
+    gemini_dir = Path.home() / ".gemini"
+    if gemini_dir.exists():
         # Check directory permissions
-        dir_perms = oct(claude_dir.stat().st_mode)[-3:]
+        dir_perms = oct(gemini_dir.stat().st_mode)[-3:]
         if dir_perms in ("700", "755"):
-            console.print(f"  ✅ ~/.claude permissions: {dir_perms}")
+            console.print(f"  ✅ ~/.gemini permissions: {dir_perms}")
         else:
-            console.print(f"  ⚠️  ~/.claude permissions: {dir_perms} (expected 700)")
+            console.print(f"  ⚠️  ~/.gemini permissions: {dir_perms} (expected 700)")
             warnings_found += 1
         
         # Check settings.json permissions
-        settings_file = claude_dir / "settings.json"
+        settings_file = gemini_dir / "settings.json"
         if settings_file.exists():
             file_perms = oct(settings_file.stat().st_mode)[-3:]
             if file_perms == "600":
@@ -2814,12 +2814,12 @@ def doctor(
     console.print("\n[bold]10. Common Issues Check[/bold]")
     
     # Check for stale lock files
-    lock_file = Path.home() / ".claude" / ".agent_farm_launch.lock"
+    lock_file = Path.home() / ".gemini" / ".agent_farm_launch.lock"
     if lock_file.exists():
         age = time.time() - lock_file.stat().st_mtime
         if age > 300:  # 5 minutes
             console.print(f"  ⚠️  Stale lock file found ({age:.0f}s old)")
-            console.print("     Run: rm ~/.claude/.agent_farm_launch.lock")
+            console.print("     Run: rm ~/.gemini/.agent_farm_launch.lock")
             warnings_found += 1
         else:
             console.print("  ✅ No stale lock files")
@@ -2849,7 +2849,7 @@ def doctor(
 def install_completion(
     shell: Optional[str] = typer.Option(None, help="Shell to install completion for. Auto-detected if not provided.")
 ) -> None:
-    """Install shell completion for claude-code-agent-farm command"""
+    """Install shell completion for gemini-code-agent-farm command"""
     import platform
     import subprocess
     
@@ -2884,7 +2884,7 @@ def install_completion(
     try:
         # Generate completion script
         completion_script = subprocess.check_output(
-            ["claude-code-agent-farm", "--show-completion", shell],
+            ["gemini-code-agent-farm", "--show-completion", shell],
             text=True
         )
         
@@ -2900,8 +2900,8 @@ def install_completion(
             installed = False
             for comp_dir in completion_dirs:
                 comp_path = Path(comp_dir)
-                if comp_path.exists() and os.access(comp_path, os.W_OK):
-                    comp_file = comp_path / "claude-code-agent-farm"
+                if comp_path.exists() and os.aggess(comp_path, os.W_OK):
+                    comp_file = comp_path / "gemini-code-agent-farm"
                     comp_file.write_text(completion_script)
                     console.print(f"[green]✓ Installed completion to {comp_file}[/green]")
                     installed = True
@@ -2913,7 +2913,7 @@ def install_completion(
                 if bashrc.exists():
                     # Check if already installed
                     bashrc_content = bashrc.read_text()
-                    if "claude-code-agent-farm completion" not in bashrc_content:
+                    if "gemini-code-agent-farm completion" not in bashrc_content:
                         with bashrc.open("a") as f:
                             f.write("\n# Claude Code Agent Farm completion\n")
                             f.write(completion_script)
@@ -2938,8 +2938,8 @@ def install_completion(
             installed = False
             for comp_dir in comp_dirs:
                 comp_path = Path(comp_dir)
-                if comp_path.exists() and os.access(comp_path, os.W_OK):
-                    comp_file = comp_path / "_claude-code-agent-farm"
+                if comp_path.exists() and os.aggess(comp_path, os.W_OK):
+                    comp_file = comp_path / "_gemini-code-agent-farm"
                     comp_file.write_text(completion_script)
                     console.print(f"[green]✓ Installed completion to {comp_file}[/green]")
                     installed = True
@@ -2949,7 +2949,7 @@ def install_completion(
                 # Create user completions directory
                 user_comp_dir = Path.home() / ".zsh" / "completions"
                 user_comp_dir.mkdir(parents=True, exist_ok=True)
-                comp_file = user_comp_dir / "_claude-code-agent-farm"
+                comp_file = user_comp_dir / "_gemini-code-agent-farm"
                 comp_file.write_text(completion_script)
                 console.print(f"[green]✓ Installed completion to {comp_file}[/green]")
                 
@@ -2959,7 +2959,7 @@ def install_completion(
                     zshrc_content = zshrc.read_text()
                     if str(user_comp_dir) not in zshrc_content:
                         with zshrc.open("a") as f:
-                            f.write("\n# Add claude-code-agent-farm completions\n")
+                            f.write("\n# Add gemini-code-agent-farm completions\n")
                             f.write(f"fpath=({user_comp_dir} $fpath)\n")
                             f.write("autoload -Uz compinit && compinit\n")
                         console.print(f"[green]✓ Updated {zshrc} to include completion directory[/green]")
@@ -2970,12 +2970,12 @@ def install_completion(
             # Install to fish completions directory
             fish_comp_dir = Path.home() / ".config" / "fish" / "completions"
             fish_comp_dir.mkdir(parents=True, exist_ok=True)
-            comp_file = fish_comp_dir / "claude-code-agent-farm.fish"
+            comp_file = fish_comp_dir / "gemini-code-agent-farm.fish"
             comp_file.write_text(completion_script)
             console.print(f"[green]✓ Installed completion to {comp_file}[/green]")
             console.print("[dim]Completion will be available in new fish shells[/dim]")
         
-        console.print("\n[bold green]Shell completion installed successfully![/bold green]")
+        console.print("\n[bold green]Shell completion installed suggessfully![/bold green]")
         console.print("You can now use Tab to complete commands and options.")
         
     except subprocess.CalledProcessError as e:

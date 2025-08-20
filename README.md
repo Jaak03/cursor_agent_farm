@@ -1,6 +1,6 @@
-# Claude Code Agent Farm 🤖🚜
+# Gemini Code Agent Farm 🤖🚜
 
-> Orchestrate multiple Claude Code agents working in parallel to improve your codebase through automated bug fixing or systematic best practices implementation
+> Orchestrate multiple Gemini Code agents working in parallel to improve your codebase through automated bug fixing or systematic best practices implementation
 
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -8,11 +8,11 @@
 
 ## 🎯 What is this?
 
-Claude Code Agent Farm is a powerful orchestration framework that runs multiple Claude Code (`cc`) sessions in parallel to systematically improve your codebase. It supports multiple technology stacks and workflow types, allowing teams of AI agents to work together on large-scale code improvements.
+Gemini Code Agent Farm is a powerful orchestration framework that runs multiple Gemini Code (`gg`) sessions in parallel to systematically improve your codebase. It supports multiple technology stacks and workflow types, allowing teams of AI agents to work together on large-scale code improvements.
 
 ### Key Features
 
-- 🚀 **Parallel Processing**: Run 20+ Claude Code agents simultaneously (up to 50 with `max_agents` config)
+- 🚀 **Parallel Processing**: Run 20+ Gemini Code agents simultaneously (up to 50 with `max_agents` config)
 - 🎯 **Multiple Workflows**: Bug fixing, best practices implementation, or coordinated multi-agent development
 - 🤝 **Agent Coordination**: Advanced lock-based system prevents conflicts between parallel agents
 - 🌐 **Multi-Stack Support**: 34 technology stacks including Next.js, Python, Rust, Go, Java, Angular, Flutter, C++, and more
@@ -30,18 +30,18 @@ Claude Code Agent Farm is a powerful orchestration framework that runs multiple 
 
 - **Python 3.13+** (managed by `uv`)
 - **tmux** (for terminal multiplexing)
-- **Claude Code** (`claude` command installed and configured)
+- **Gemini Code** (`gemini` command installed and configured)
 - **git** (for version control)
 - **Your project's tools** (e.g., `bun` for Next.js, `mypy`/`ruff` for Python)
 - **direnv** (optional but recommended for automatic environment activation)
 - **uv** (modern Python package manager)
 
-### Important: The `cc` Alias
+### Important: The `gg` Alias
 
-The agent farm requires a special `cc` alias to launch Claude Code with the necessary permissions:
+The agent farm requires a special `gg` alias to launch Gemini Code with the necessary permissions:
 
 ```bash
-alias cc="ENABLE_BACKGROUND_TASKS=1 claude --dangerously-skip-permissions"
+alias gg="ENABLE_BACKGROUND_TASKS=1 gemini --dangerously-skip-permissions"
 ```
 
 This alias will be configured automatically by the setup script.
@@ -51,8 +51,8 @@ This alias will be configured automatically by the setup script.
 ### 1. Clone and Setup
 
 ```bash
-git clone https://github.com/Dicklesworthstone/claude_code_agent_farm.git
-cd claude_code_agent_farm
+git clone https://github.com/Dicklesworthstone/gemini_code_agent_farm.git
+cd gemini_code_agent_farm
 chmod +x setup.sh
 ./setup.sh
 ```
@@ -61,7 +61,7 @@ The setup script will:
 - Check and install missing prerequisites
 - Create a Python 3.13 virtual environment
 - Install all dependencies
-- Configure the `cc` alias with automatic detection and fixing of common mis-quotings
+- Configure the `gg` alias with automatic detection and fixing of common mis-quotings
 - Validate existing aliases and patch incorrect quote patterns
 - Set up direnv for automatic environment activation
 - Handle both bash and zsh shells automatically
@@ -71,13 +71,13 @@ The setup script will:
 Run the pre-flight verifier to ensure everything is configured correctly:
 
 ```bash
-claude-code-agent-farm doctor --path /path/to/project
+gemini-code-agent-farm doctor --path /path/to/project
 ```
 
 This command checks:
 - Python version compatibility
 - Required tools installation (tmux, git, uv)
-- Claude Code configuration and API keys
+- Gemini Code configuration and API keys
 - Project-specific tool availability
 - File permissions and common issues
 
@@ -87,12 +87,12 @@ For faster command entry with tab completion:
 
 ```bash
 # Auto-detect shell and install completion
-claude-code-agent-farm install-completion
+gemini-code-agent-farm install-completion
 
 # Or specify shell explicitly
-claude-code-agent-farm install-completion --shell bash
-claude-code-agent-farm install-completion --shell zsh
-claude-code-agent-farm install-completion --shell fish
+gemini-code-agent-farm install-completion --shell bash
+gemini-code-agent-farm install-completion --shell zsh
+gemini-code-agent-farm install-completion --shell fish
 ```
 
 ### 4. Choose Your Workflow
@@ -100,10 +100,10 @@ claude-code-agent-farm install-completion --shell fish
 #### For Bug Fixing (Traditional)
 ```bash
 # Next.js project
-claude-code-agent-farm --path /path/to/project --config configs/nextjs_config.json
+gemini-code-agent-farm --path /path/to/project --config configs/nextjs_config.json
 
 # Python project
-claude-code-agent-farm --path /path/to/project --config configs/python_config.json
+gemini-code-agent-farm --path /path/to/project --config configs/python_config.json
 ```
 
 #### For Best Practices Implementation
@@ -112,7 +112,7 @@ claude-code-agent-farm --path /path/to/project --config configs/python_config.js
 cp best_practices_guides/NEXTJS15_BEST_PRACTICES.md /path/to/project/best_practices_guides/
 
 # Run with best practices config
-claude-code-agent-farm --path /path/to/project --config configs/nextjs_best_practices_config.json
+gemini-code-agent-farm --path /path/to/project --config configs/nextjs_best_practices_config.json
 ```
 
 ## 🛠️ Tool Setup Scripts
@@ -197,19 +197,19 @@ Additional setup scripts are available for:
 
 This project consists of two independent scripts that work together:
 
-#### 1. **Python Script** (`claude_code_agent_farm.py`) - The Brain 🧠
+#### 1. **Python Script** (`gemini_code_agent_farm.py`) - The Brain 🧠
 
 This is the main orchestrator that does all the heavy lifting:
 
 - **Creates and manages tmux sessions** with multiple panes
 - **Generates the problems file** by running configured commands
-- **Launches Claude Code agents** in each tmux pane
+- **Launches Gemini Code agents** in each tmux pane
 - **Monitors agent health** (context usage, work status, errors)
 - **Auto-restarts agents** when they complete tasks or hit issues
 - **Runs monitoring dashboard** in the tmux controller window
 - **Handles graceful shutdown** with Ctrl+C
 - **Manages settings backup/restore** to prevent corruption
-- **Implements file locking** for concurrent access safety
+- **Implements file locking** for concurrent aggess safety
 - **Writes monitor state** to JSON file for external monitoring
 
 **You run this script and it stays running** (unless using `--no-monitor` mode). The monitoring dashboard is displayed in the tmux session's controller window, not in the launching terminal.
@@ -234,7 +234,7 @@ Think of it like this:
 There's a hidden command for running just the monitor display:
 
 ```bash
-claude-code-agent-farm monitor-only --path /project --session claude_agents
+gemini-code-agent-farm monitor-only --path /project --session gemini_agents
 ```
 
 This reads the monitor state file and displays the dashboard without launching agents.
@@ -337,7 +337,7 @@ This workflow excels at:
 
 To use this workflow, specify the cooperating agents prompt:
 ```bash
-claude-code-agent-farm \
+gemini-code-agent-farm \
   --path /project \
   --prompt-file prompts/cooperating_agents_improvement_prompt_for_python_fastapi_postgres.txt \
   --agents 5
@@ -439,7 +439,7 @@ Create your own configuration:
   "chunk_size": 50,
   "agents": 20,
   "max_agents": 50,
-  "session": "claude_agents",
+  "session": "gemini_agents",
   "prompt_file": "prompts/default_prompt_nextjs.txt",
   "auto_restart": true,
   "context_threshold": 20,
@@ -450,7 +450,7 @@ Create your own configuration:
   "tmux_kill_on_exit": true,
   "tmux_mouse": true,
   "stagger": 10.0,
-  "wait_after_cc": 15.0,
+  "wait_after_gg": 15.0,
   "check_interval": 10,
   "skip_regenerate": false,
   "skip_commit": false,
@@ -480,7 +480,7 @@ Create your own configuration:
 All configuration options can be overridden via CLI:
 
 ```bash
-claude-code-agent-farm \
+gemini-code-agent-farm \
   --path /project \
   --config configs/base.json \
   --agents 10 \
@@ -500,12 +500,12 @@ Required:
 
 Agent Configuration:
   --agents N, -n N         Number of agents (default: 20)
-  --session NAME, -s NAME  tmux session name (default: claude_agents)
+  --session NAME, -s NAME  tmux session name (default: gemini_agents)
   --chunk-size N           Override config chunk size
 
 Timing:
   --stagger SECONDS        Delay between starting agents (default: 10.0)
-  --wait-after-cc SECONDS  Wait time after launching cc (default: 15.0)
+  --wait-after-gg SECONDS  Wait time after launching gg (default: 15.0)
   --check-interval SECONDS Health check interval (default: 10)
 
 Features:
@@ -527,7 +527,7 @@ Advanced:
   --tmux-mouse             Enable tmux mouse support (default: true)
   --no-tmux-mouse          Disable tmux mouse support
   --fast-start             Skip shell prompt detection
-  --full-backup            Full backup of Claude settings before start
+  --full-backup            Full backup of Gemini settings before start
 ```
 
 ## 📝 Prompt System
@@ -618,13 +618,13 @@ Work on approximately {chunk_size} improvements at a time...
 1. **Guide Distribution**: Copies best practices guides to project
 2. **Progress Document**: Agents create/update tracking document
 3. **Systematic Implementation**: Works through guidelines incrementally
-4. **Accurate Tracking**: Maintains honest completion percentages
+4. **Aggurate Tracking**: Maintains honest completion percentages
 5. **Session Continuity**: Progress persists between runs
 
 ### Safety Features
 
-1. **Settings Backup**: Automatically backs up Claude settings before starting
-   - Creates timestamped backups in `.claude_agent_farm_backups/` in your project
+1. **Settings Backup**: Automatically backs up Gemini settings before starting
+   - Creates timestamped backups in `.gemini_agent_farm_backups/` in your project
    - Keeps last 10 backups with automatic rotation
    - Enforces 200MB total size limit to prevent disk bloat
    - Full backup option with `--full-backup` flag
@@ -632,13 +632,13 @@ Work on approximately {chunk_size} improvements at a time...
 2. **Settings Restore**: Restores from backup if corruption detected
    - Automatic detection of settings errors
    - Seamless restoration during agent startup
-3. **File Locking**: Uses file locks to prevent concurrent access issues
-   - Lock files in `~/.claude/.agent_farm_launch.lock`
+3. **File Locking**: Uses file locks to prevent concurrent aggess issues
+   - Lock files in `~/.gemini/.agent_farm_launch.lock`
    - 30-second stale lock detection and cleanup
-   - Prevents concurrent Claude launches that could corrupt settings
+   - Prevents concurrent Gemini launches that could corrupt settings
 4. **Permission Management**: Automatically fixes file permissions
    - Sets 600 permissions on settings.json
-   - Sets 700 permissions on .claude directory
+   - Sets 700 permissions on .gemini directory
    - Ensures proper file ownership
 5. **Atomic Operations**: Uses atomic file operations for safety
 6. **Emergency Cleanup**: Handles unexpected exits gracefully
@@ -646,8 +646,8 @@ Work on approximately {chunk_size} improvements at a time...
    - Removes lock files
    - Deletes state files
 7. **Launch Locking**: Prevents concurrent Claude launches with lock files
-8. **Adaptive Stagger**: Intelligent launch delays based on success/failure
-   - Halves stagger time when previous launch succeeds (faster startup when healthy)
+8. **Adaptive Stagger**: Intelligent launch delays based on suggess/failure
+   - Halves stagger time when previous launch suggeeds (faster startup when healthy)
    - Doubles stagger time only when previous launch fails (retains safety)
    - Capped at 60 seconds maximum to prevent excessive delays
 9. **Agent Limits**: Enforces max_agents limit (default: 50)
@@ -677,7 +677,7 @@ Each tmux pane displays context warnings in its title bar:
 The monitoring dashboard runs in the tmux controller window:
 
 ```
-Claude Agent Farm - 14:32:15
+Gemini Agent Farm - 14:32:15
 ┏━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━┓
 ┃ Agent    ┃ Status     ┃ Cycles ┃ Context  ┃ Runtime      ┃ Heartbeat┃ Errors ┃
 ┡━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━┩
@@ -694,8 +694,8 @@ Claude Agent Farm - 14:32:15
 ./view_agents.sh
 
 # Direct tmux commands
-tmux attach -t claude_agents
-tmux attach -t claude_agents:controller  # Dashboard only
+tmux attach -t gemini_agents
+tmux attach -t gemini_agents:controller  # Dashboard only
 ```
 
 ### Context Reset Macro
@@ -730,7 +730,7 @@ When `--auto-restart` is enabled:
 
 ### Monitor State File
 
-The system writes monitor state to `.claude_agent_farm_state.json` in the project directory. This file contains:
+The system writes monitor state to `.gemini_agent_farm_state.json` in the project directory. This file contains:
 - Agent statuses and health metrics
 - Session information
 - Runtime statistics
@@ -738,7 +738,7 @@ The system writes monitor state to `.claude_agent_farm_state.json` in the projec
 Structure:
 ```json
 {
-  "session": "claude_agents",
+  "session": "gemini_agents",
   "num_agents": 20,
   "agents": {
     "0": {
@@ -782,13 +782,13 @@ Features:
 ### Quick Test Run
 ```bash
 # 5 agents, skip git operations
-claude-code-agent-farm --path /project -n 5 --skip-regenerate --skip-commit
+gemini-code-agent-farm --path /project -n 5 --skip-regenerate --skip-commit
 ```
 
 ### Production Bug Fixing
 ```bash
 # Full run with Python project
-claude-code-agent-farm \
+gemini-code-agent-farm \
   --path /python/project \
   --config configs/python_uv_config.json \
   --agents 15 \
@@ -798,7 +798,7 @@ claude-code-agent-farm \
 ### Best Practices Implementation
 ```bash
 # Systematic improvements
-claude-code-agent-farm \
+gemini-code-agent-farm \
   --path /nextjs/project \
   --config configs/nextjs_best_practices_config.json \
   --agents 10
@@ -807,7 +807,7 @@ claude-code-agent-farm \
 ### Incremental Commits
 ```bash
 # Commit progress every 5 cycles
-claude-code-agent-farm \
+gemini-code-agent-farm \
   --path /project \
   --config configs/python_config.json \
   --agents 20 \
@@ -818,7 +818,7 @@ claude-code-agent-farm \
 ### Custom Configuration
 ```bash
 # Override config settings
-claude-code-agent-farm \
+gemini-code-agent-farm \
   --path /project \
   --config configs/base.json \
   --chunk-size 25 \
@@ -829,7 +829,7 @@ claude-code-agent-farm \
 ### Headless Operation
 ```bash
 # Run without monitoring (for CI/CD)
-claude-code-agent-farm \
+gemini-code-agent-farm \
   --path /project \
   --config configs/ci-config.json \
   --no-monitor \
@@ -839,17 +839,17 @@ claude-code-agent-farm \
 ### Specialized Stacks
 ```bash
 # Angular development
-claude-code-agent-farm \
+gemini-code-agent-farm \
   --path /angular/project \
   --config configs/angular_config.json
 
 # Blockchain development
-claude-code-agent-farm \
+gemini-code-agent-farm \
   --path /solana/project \
   --config configs/solana_anchor_config.json
 
 # Data engineering
-claude-code-agent-farm \
+gemini-code-agent-farm \
   --path /data/project \
   --config configs/polars_duckdb_config.json
 ```
@@ -857,7 +857,7 @@ claude-code-agent-farm \
 ### Cooperating Agents Mode
 ```bash
 # Advanced multi-agent coordination for complex improvements
-claude-code-agent-farm \
+gemini-code-agent-farm \
   --path /project \
   --prompt-file prompts/cooperating_agents_improvement_prompt_for_python_fastapi_postgres.txt \
   --agents 20 \
@@ -869,10 +869,10 @@ claude-code-agent-farm \
 ### Common Issues
 
 #### Agents not starting
-- Verify `cc` alias: `alias | grep cc`
-- Test Claude Code manually: `cc`
+- Verify `gg` alias: `alias | grep gg`
+- Test Gemini Code manually: `gg`
 - Check API key configuration
-- Increase `--wait-after-cc` timing
+- Increase `--wait-after-gg` timing
 - Use `--full-backup` flag if settings corruption suspected
 
 #### Configuration errors
@@ -891,27 +891,27 @@ claude-code-agent-farm \
 #### Settings corruption
 - System automatically backs up settings
 - Restores from backup on error detection
-- Manual restore: Check `~/.claude/backups/`
+- Manual restore: Check `~/.gemini/backups/`
 - Use `--full-backup` for comprehensive backup
 
 ### Debug Features
 
-- **State File**: Check `.claude_agent_farm_state.json` for agent status
+- **State File**: Check `.gemini_agent_farm_state.json` for agent status
 - **Heartbeat Files**: Monitor `.heartbeats/agent*.heartbeat` for activity tracking
-- **Lock Files**: Look for `.agent_farm_launch.lock` in `~/.claude/`
-- **Backup Directory**: `.claude_agent_farm_backups/` in project contains settings backups
-- **Pre-flight Check**: Run `claude-code-agent-farm doctor` to diagnose issues
+- **Lock Files**: Look for `.agent_farm_launch.lock` in `~/.gemini/`
+- **Backup Directory**: `.gemini_agent_farm_backups/` in project contains settings backups
+- **Pre-flight Check**: Run `gemini-code-agent-farm doctor` to diagnose issues
 - **Emergency Cleanup**: Ctrl+C triggers graceful shutdown
   - First Ctrl+C: Graceful shutdown with agent cleanup
   - Second Ctrl+C within 3 seconds: Force kills tmux session
   - Automatically cleans up state files and locks
-- **Manual tmux**: `tmux kill-session -t claude_agents` to force cleanup
+- **Manual tmux**: `tmux kill-session -t gemini_agents` to force cleanup
 
 ## 📁 Project Structure
 
 ```
-claude_code_agent_farm/
-├── claude_code_agent_farm.py    # Main orchestrator
+gemini_code_agent_farm/
+├── gemini_code_agent_farm.py    # Main orchestrator
 ├── view_agents.sh               # Tmux viewer utility
 ├── setup.sh                     # Automated setup
 ├── pyproject.toml              # Python project configuration
@@ -1000,7 +1000,7 @@ claude_code_agent_farm/
 ```bash
 #!/bin/bash
 # Automated code improvement script
-claude-code-agent-farm \
+gemini-code-agent-farm \
   --path $PROJECT_PATH \
   --config configs/ci-config.json \
   --no-monitor \
@@ -1027,9 +1027,9 @@ Configure custom git branches and remotes in your config:
   - Base sizes by stack: Python (50), Next.js (50), Rust (30), Go (40), Java (35)
   - Dynamic formula: `max(10, total_lines / agents / 2)`
   - Prevents agents from running out of work or doing trivial tasks
-- **Stagger Time**: Adaptive timing based on launch success
+- **Stagger Time**: Adaptive timing based on launch suggess
   - Default 10s baseline prevents settings corruption
-  - Automatically halves when previous launch succeeds (minimum: baseline)
+  - Automatically halves when previous launch suggeeds (minimum: baseline)
   - Doubles only when previous launch fails (maximum: 60s)
   - Results in faster startup when system is healthy
 - **Context Threshold**: Lower values (15-20%) clear context sooner
@@ -1037,7 +1037,7 @@ Configure custom git branches and remotes in your config:
 - **Check Interval**: Balance between responsiveness and CPU usage
 - **Heartbeat Monitoring**: Detects stuck agents (>2 minutes since last pulse)
 - **Max Agents**: Increase beyond 50 for powerful systems
-- **Wait After CC**: Default 15s ensures Claude is fully ready
+- **Wait After GG**: Default 15s ensures Gemini is fully ready
   - Increase if seeing startup failures
 - **Incremental Commits**: Use `--commit-every N` to commit progress periodically
   - Prevents giant diffs that are hard to review
@@ -1117,26 +1117,26 @@ MIT License - see [LICENSE](LICENSE) file
 - **Start with few agents** to test
 - **Monitor first runs** to ensure proper behavior
 - **Check resource usage** for large agent counts
-- **Verify cc alias** is properly configured
+- **Verify gg alias** is properly configured
 - **Ensure git is configured** with proper credentials
 - **Respect agent limits** (default max: 50)
-- **Claude settings** are automatically backed up and restored
+- **Gemini settings** are automatically backed up and restored
 - **Lock files** prevent concurrent launches and corruption
 - **State files** enable external monitoring tools
 
 ## 🔍 Additional Resources
 
 ### Monitoring Tools
-- Monitor state file (`.claude_agent_farm_state.json`) for external integrations
+- Monitor state file (`.gemini_agent_farm_state.json`) for external integrations
 - Heartbeat files (`.heartbeats/agent*.heartbeat`) track agent activity
 - tmux pane titles show real-time context warnings
 - tmux session logs for debugging agent issues
 - Git commit history for tracking improvements
 
 ### Recovery Options
-- Manual settings restore from `.claude_agent_farm_backups/` in your project
-- Lock file cleanup: `rm ~/.claude/.agent_farm_launch.lock`
-- Emergency session cleanup: `tmux kill-session -t claude_agents`
+- Manual settings restore from `.gemini_agent_farm_backups/` in your project
+- Lock file cleanup: `rm ~/.gemini/.agent_farm_launch.lock`
+- Emergency session cleanup: `tmux kill-session -t gemini_agents`
 - View HTML run reports from previous sessions for debugging
 
 ### Performance Optimization

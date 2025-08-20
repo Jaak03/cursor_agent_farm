@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Simple viewer for Claude Agent Farm tmux session
+# Simple viewer for Agent Farm tmux session
 # Compatible with both bash and zsh
 
 SESSION="${1:-claude_agents}"
@@ -25,7 +25,7 @@ fi
 # Get number of panes in agents window
 PANE_COUNT=$(tmux list-panes -t "$SESSION:agents" 2>/dev/null | wc -l)
 
-print_color "${CYAN}Claude Agent Farm Viewer${NC}\n"
+print_color "${CYAN}Agent Farm Viewer${NC}\n"
 print_color "${CYAN}Session: $SESSION${NC}\n"
 if [ "$PANE_COUNT" -gt 0 ]; then
     print_color "${CYAN}Agents: $PANE_COUNT${NC}\n"
