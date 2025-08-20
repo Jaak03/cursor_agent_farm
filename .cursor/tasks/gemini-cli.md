@@ -24,4 +24,7 @@
 *   Updated `README.md` to replace all instances of "Claude" and "cc" with "Gemini" and "gg".
 *   Updated `pyproject.toml` to reflect the new script name.
 *   Updated `setup.sh` to reflect the new script name and branding.
-*   Started updating the `configs` directory.
+*   Updated all files in the `configs` directory to replace "claude_agents" with "gemini_agents" and "wait_after_cc" with "wait_after_gg".
+*   Updated all files in the `prompts` directory to replace "cc" with "gg".
+
+**Task Completed.**
